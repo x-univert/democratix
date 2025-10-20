@@ -1,0 +1,62 @@
+# Dependencies
+node_modules/
+target/
+dist/
+build/
+
+# Environment
+.env
+.env.local
+.env.production
+*.pem
+*.key
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Rust
+Cargo.lock
+target/
+
+# Build artifacts
+*.wasm
+*.abi.json
+contracts/*/output/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+
+# MultiversX
+*.json.d.ts
+**/wasm/
+mxpy.data-storage.json
+
+# Frontend
+.next/
+out/
+.vercel
+.turbo
+
+# Cypress
+cypress/videos/
+cypress/screenshots/

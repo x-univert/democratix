@@ -1,0 +1,22 @@
+[package]
+name = "voting"
+version = "0.1.0"
+authors = ["DEMOCRATIX Contributors"]
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+multiversx-sc = "0.47.0"
+
+[dev-dependencies]
+multiversx-sc-scenario = "0.47.0"
+
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+panic = "abort"
+overflow-checks = false
