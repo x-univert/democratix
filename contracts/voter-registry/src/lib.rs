@@ -1,8 +1,18 @@
 #![no_std]
 
-multiversx_sc::imports!();
+use multiversx_sc::{derive_imports::*, imports::*};
 
 mod crypto_mock;
+
+/// Structure représentant un électeur
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Debug)]
+pub struct Voter<M: ManagedTypeApi> {
+    pub credential_hash: ManagedBuffer<M>,
+    pub is_registered: bool,
+    pub has_voted: bool,
+    pub voting_token: ManagedBuffer<M>,
+}
 
 /// Smart Contract d'Enregistrement des Électeurs
 ///
@@ -12,15 +22,6 @@ mod crypto_mock;
 pub trait VoterRegistry {
     #[init]
     fn init(&self) {}
-
-    /// Structure représentant un électeur
-    #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
-    pub struct Voter<M: ManagedTypeApi> {
-        credential_hash: ManagedBuffer<M>,
-        is_registered: bool,
-        has_voted: bool,
-        voting_token: ManagedBuffer<M>,
-    }
 
     /// Enregistre un nouvel électeur avec une preuve zk-SNARK
     ///
@@ -40,7 +41,8 @@ pub trait VoterRegistry {
         );
 
         let caller = self.blockchain().get_caller();
-        let credential_hash = self.crypto().sha256(&credential_proof);
+        let credential_hash_bytes = self.crypto().sha256(&credential_proof);
+        let credential_hash = credential_hash_bytes.as_managed_buffer().clone();
 
         // Vérifier que l'électeur n'est pas déjà enregistré
         require!(
@@ -104,9 +106,9 @@ pub trait VoterRegistry {
 
     fn generate_voting_token(&self, election_id: u64, caller: &ManagedAddress) -> ManagedBuffer {
         let mut data = ManagedBuffer::new();
-        data.append(&election_id.to_be_bytes()[..]);
+        data.append_bytes(&election_id.to_be_bytes()[..]);
         data.append(caller.as_managed_buffer());
-        data.append(&self.blockchain().get_block_timestamp().to_be_bytes()[..]);
-        self.crypto().sha256(&data)
+        data.append_bytes(&self.blockchain().get_block_timestamp().to_be_bytes()[..]);
+        self.crypto().sha256(&data).as_managed_buffer().clone()
     }
 }

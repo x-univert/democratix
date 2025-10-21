@@ -21,6 +21,11 @@ build/
 .DS_Store
 Thumbs.db
 
+# Installers
+*.msi
+*.exe
+*.dmg
+
 # Logs
 *.log
 logs/

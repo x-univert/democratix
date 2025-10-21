@@ -1,8 +1,51 @@
 #![no_std]
 
-multiversx_sc::imports!();
+use multiversx_sc::{derive_imports::*, imports::*};
 
 mod crypto_mock;
+
+/// Statut d'une élection
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq, Eq, Clone, Copy, Debug)]
+pub enum ElectionStatus {
+    Pending,    // Créée mais pas encore commencée
+    Active,     // En cours
+    Closed,     // Terminée, en attente de dépouillement
+    Finalized,  // Résultats publiés
+}
+
+/// Structure représentant un candidat
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, Debug)]
+pub struct Candidate<M: ManagedTypeApi> {
+    pub id: u32,
+    pub name: ManagedBuffer<M>,
+    pub description_ipfs: ManagedBuffer<M>,
+}
+
+/// Structure représentant une élection
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Debug)]
+pub struct Election<M: ManagedTypeApi> {
+    pub id: u64,
+    pub title: ManagedBuffer<M>,
+    pub description_ipfs: ManagedBuffer<M>,
+    pub organizer: ManagedAddress<M>,
+    pub start_time: u64,
+    pub end_time: u64,
+    pub num_candidates: u32,
+    pub status: ElectionStatus,
+    pub total_votes: u64,
+}
+
+/// Vote chiffré
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Debug)]
+pub struct EncryptedVote<M: ManagedTypeApi> {
+    pub encrypted_choice: ManagedBuffer<M>,
+    pub proof: ManagedBuffer<M>,  // zk-SNARK proof
+    pub timestamp: u64,
+}
 
 /// Smart Contract de Vote
 ///
@@ -12,45 +55,6 @@ pub trait VotingContract {
     #[init]
     fn init(&self) {}
 
-    /// Statut d'une élection
-    #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, PartialEq)]
-    pub enum ElectionStatus {
-        Pending,    // Créée mais pas encore commencée
-        Active,     // En cours
-        Closed,     // Terminée, en attente de dépouillement
-        Finalized,  // Résultats publiés
-    }
-
-    /// Structure représentant un candidat
-    #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode, Clone)]
-    pub struct Candidate<M: ManagedTypeApi> {
-        id: u32,
-        name: ManagedBuffer<M>,
-        description_ipfs: ManagedBuffer<M>,
-    }
-
-    /// Structure représentant une élection
-    #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
-    pub struct Election<M: ManagedTypeApi> {
-        id: u64,
-        title: ManagedBuffer<M>,
-        description_ipfs: ManagedBuffer<M>,
-        organizer: ManagedAddress<M>,
-        start_time: u64,
-        end_time: u64,
-        candidates: ManagedVec<M, Candidate<M>>,
-        status: ElectionStatus,
-        total_votes: u64,
-    }
-
-    /// Vote chiffré
-    #[derive(TypeAbi, TopEncode, TopDecode, NestedEncode, NestedDecode)]
-    pub struct EncryptedVote<M: ManagedTypeApi> {
-        encrypted_choice: ManagedBuffer<M>,
-        proof: ManagedBuffer<M>,  // zk-SNARK proof
-        timestamp: u64,
-    }
-
     /// Crée une nouvelle élection
     ///
     /// # Arguments
@@ -58,7 +62,6 @@ pub trait VotingContract {
     /// * `description_ipfs` - Hash IPFS de la description complète
     /// * `start_time` - Timestamp de début
     /// * `end_time` - Timestamp de fin
-    /// * `candidates` - Liste des candidats
     #[endpoint(createElection)]
     fn create_election(
         &self,
@@ -66,10 +69,8 @@ pub trait VotingContract {
         description_ipfs: ManagedBuffer,
         start_time: u64,
         end_time: u64,
-        candidates: ManagedVec<Candidate<Self::Api>>,
     ) -> u64 {
         require!(start_time < end_time, "Dates invalides");
-        require!(candidates.len() >= 2, "Minimum 2 candidats requis");
         require!(
             start_time > self.blockchain().get_block_timestamp(),
             "La date de début doit être dans le futur"
@@ -85,16 +86,43 @@ pub trait VotingContract {
             organizer: self.blockchain().get_caller(),
             start_time,
             end_time,
-            candidates,
+            num_candidates: 0,
             status: ElectionStatus::Pending,
             total_votes: 0,
         };
 
         self.elections(election_id).set(&election);
 
-        self.election_created_event(election_id, &election.organizer, start_time, end_time);
+        self.election_created_event(election_id, &election.organizer);
 
         election_id
+    }
+
+    /// Ajoute un candidat à une élection
+    #[endpoint(addCandidate)]
+    fn add_candidate(
+        &self,
+        election_id: u64,
+        candidate_id: u32,
+        name: ManagedBuffer,
+        description_ipfs: ManagedBuffer,
+    ) {
+        let mut election = self.elections(election_id).get();
+        require!(
+            self.blockchain().get_caller() == election.organizer,
+            "Seul l'organisateur peut ajouter des candidats"
+        );
+        require!(election.status == ElectionStatus::Pending, "Élection déjà commencée");
+
+        let candidate = Candidate {
+            id: candidate_id,
+            name,
+            description_ipfs,
+        };
+
+        self.candidates(election_id).push(&candidate);
+        election.num_candidates += 1;
+        self.elections(election_id).set(&election);
     }
 
     /// Soumet un vote chiffré
@@ -199,6 +227,9 @@ pub trait VotingContract {
     #[storage_mapper("elections")]
     fn elections(&self, election_id: u64) -> SingleValueMapper<Election<Self::Api>>;
 
+    #[storage_mapper("candidates")]
+    fn candidates(&self, election_id: u64) -> VecMapper<Candidate<Self::Api>>;
+
     #[storage_mapper("votes")]
     fn votes(&self, election_id: u64) -> VecMapper<EncryptedVote<Self::Api>>;
 
@@ -209,8 +240,6 @@ pub trait VotingContract {
         &self,
         #[indexed] election_id: u64,
         #[indexed] organizer: &ManagedAddress,
-        start_time: u64,
-        end_time: u64,
     );
 
     #[event("voteCast")]
