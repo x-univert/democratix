@@ -1,0 +1,141 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { useGetIsLoggedIn, useGetAccount } from '../hooks/sdkDappHooks';
+import { logout } from '../helpers/sdkDappHelpers';
+
+const Home = () => {
+  const navigate = useNavigate();
+  const isLoggedIn = useGetIsLoggedIn();
+  const { address } = useGetAccount();
+
+  const handleLogout = () => {
+    logout(`${window.location.origin}`);
+  };
+
+  const handleLogin = () => {
+    navigate('/unlock');
+  };
+
+  return (
+    <div className="home-page">
+      <div className="hero">
+        <h1>Bienvenue sur DEMOCRATIX</h1>
+        <p>La plateforme de vote décentralisée et sécurisée</p>
+      </div>
+
+      <div className="auth-section">
+        {!isLoggedIn ? (
+          <div className="login-options">
+            <h2>Connectez-vous pour participer</h2>
+            <p style={{ marginBottom: '30px', color: '#888' }}>
+              Connectez votre wallet MultiversX pour accéder à la plateforme
+            </p>
+            <button
+              onClick={handleLogin}
+              style={{
+                padding: '15px 40px',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                transition: 'all 0.3s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.6)';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.4)';
+              }}
+            >
+              🔐 Se Connecter
+            </button>
+            <div style={{ marginTop: '25px', fontSize: '0.85em', color: '#666', textAlign: 'center' }}>
+              <p style={{ marginBottom: '10px' }}>🔒 Connexion 100% sécurisée via MultiversX</p>
+              <p style={{ fontSize: '0.9em', color: '#999' }}>
+                ℹ️ Supporte : Extension, xPortal, Web Wallet, Ledger, Opera, xAlias
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="logged-in-actions">
+            <div style={{ marginBottom: '20px', padding: '15px', background: 'rgba(0,255,0,0.1)', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '0.9em' }}>
+                ✅ Connecté : <code style={{ background: 'rgba(0,0,0,0.2)', padding: '2px 8px', borderRadius: '4px' }}>
+                  {address.substring(0, 10)}...{address.substring(address.length - 6)}
+                </code>
+              </p>
+            </div>
+            <h2>Que souhaitez-vous faire ?</h2>
+            <div className="action-cards">
+              <Link to="/elections" className="action-card">
+                <h3>📊 Voir les élections</h3>
+                <p>Parcourez et participez aux élections en cours</p>
+              </Link>
+
+              <Link to="/elections/create" className="action-card">
+                <h3>✨ Créer une élection</h3>
+                <p>Organisez votre propre élection décentralisée</p>
+              </Link>
+            </div>
+
+            <button
+              onClick={handleLogout}
+              style={{
+                marginTop: '30px',
+                padding: '12px 24px',
+                background: '#ff4444',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              🚪 Déconnexion
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="features">
+        <h2>Pourquoi DEMOCRATIX ?</h2>
+        <div className="feature-grid">
+          <div className="feature">
+            <h3>🔒 Sécurisé</h3>
+            <p>Votes chiffrés et stockés sur la blockchain MultiversX</p>
+          </div>
+          <div className="feature">
+            <h3>🌐 Décentralisé</h3>
+            <p>Aucune autorité centrale ne peut modifier les résultats</p>
+          </div>
+          <div className="feature">
+            <h3>🔐 Anonyme</h3>
+            <p>Votre vote reste privé grâce au chiffrement</p>
+          </div>
+          <div className="feature">
+            <h3>✅ Transparent</h3>
+            <p>Tous les votes peuvent être vérifiés sur la blockchain</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="project-status">
+        <h3>🚀 État du Projet</h3>
+        <ul>
+          <li>✅ Backend API opérationnel (http://localhost:3001)</li>
+          <li>✅ Frontend fonctionnel</li>
+          <li>✅ Smart Contracts compilés</li>
+          <li>⏳ Déploiement sur devnet à venir</li>
+        </ul>
+        <p>Version POC - Démo technique de la plateforme DEMOCRATIX</p>
+      </div>
+    </div>
+  );
+};
+
+export default Home;

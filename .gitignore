@@ -62,6 +62,9 @@ out/
 .vercel
 .turbo
 
+# Documentation personnelle (non versionnée)
+docs-dev/
+
 # Cypress
 cypress/videos/
 cypress/screenshots/
