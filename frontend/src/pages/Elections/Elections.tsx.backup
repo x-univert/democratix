@@ -1,0 +1,260 @@
+import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { RouteNamesEnum } from 'localConstants';
+import { useGetElections, type Election } from 'hooks/elections';
+import { ElectionCard } from '../../components/ElectionCard';
+import styles from './Elections.module.scss';
+
+type FilterStatus = 'all' | 'Pending' | 'Active' | 'Closed' | 'Finalized';
+
+export const Elections = () => {
+  const navigate = useNavigate();
+  const { getElections } = useGetElections();
+
+  const [elections, setElections] = useState<Election[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 9; // 3x3 grid
+
+  useEffect(() => {
+    const fetchElections = async () => {
+      setLoading(true);
+      try {
+        const data = await getElections();
+        setElections(data || []);
+      } catch (error) {
+        console.error('Erreur lors de la récupération des élections:', error);
+        setElections([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchElections();
+  }, []);
+
+  // Filtrage et recherche
+  const filteredElections = useMemo(() => {
+    let filtered = elections;
+
+    // Filtre par statut
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(e => e.status === filterStatus);
+    }
+
+    // Filtre par recherche (titre)
+    if (searchQuery) {
+      filtered = filtered.filter(e =>
+        e.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    return filtered;
+  }, [elections, filterStatus, searchQuery]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredElections.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedElections = filteredElections.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery]);
+
+  // Statistiques
+  const stats = useMemo(() => {
+    return {
+      total: elections.length,
+      pending: elections.filter(e => e.status === 'Pending').length,
+      active: elections.filter(e => e.status === 'Active').length,
+      closed: elections.filter(e => e.status === 'Closed').length,
+      finalized: elections.filter(e => e.status === 'Finalized').length
+    };
+  }, [elections]);
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingState}>
+          <div className={styles.spinner}></div>
+          <p>Chargement des élections...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.container}>
+      {/* Header */}
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.title}>Élections</h1>
+          <p className={styles.subtitle}>
+            Consultez et participez aux élections décentralisées
+          </p>
+        </div>
+        <button
+          onClick={() => navigate(RouteNamesEnum.createElection)}
+          className={styles.createButton}
+        >
+          <span className={styles.plusIcon}>+</span>
+          Créer une élection
+        </button>
+      </div>
+
+      {/* Statistiques */}
+      <div className={styles.stats}>
+        <div className={styles.statCard}>
+          <span className={styles.statValue}>{stats.total}</span>
+          <span className={styles.statLabel}>Total</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#3b82f6' }}>{stats.pending}</span>
+          <span className={styles.statLabel}>En attente</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#10b981' }}>{stats.active}</span>
+          <span className={styles.statLabel}>En cours</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#6b7280' }}>{stats.closed}</span>
+          <span className={styles.statLabel}>Fermées</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#8b5cf6' }}>{stats.finalized}</span>
+          <span className={styles.statLabel}>Finalisées</span>
+        </div>
+      </div>
+
+      {/* Filtres et recherche */}
+      <div className={styles.filters}>
+        <div className={styles.searchBox}>
+          <svg className={styles.searchIcon} viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Rechercher une élection..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.searchInput}
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className={styles.clearButton}
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        <div className={styles.statusFilters}>
+          <button
+            className={`${styles.filterButton} ${filterStatus === 'all' ? styles.active : ''}`}
+            onClick={() => setFilterStatus('all')}
+          >
+            Toutes
+          </button>
+          <button
+            className={`${styles.filterButton} ${filterStatus === 'Pending' ? styles.active : ''}`}
+            onClick={() => setFilterStatus('Pending')}
+          >
+            En attente
+          </button>
+          <button
+            className={`${styles.filterButton} ${filterStatus === 'Active' ? styles.active : ''}`}
+            onClick={() => setFilterStatus('Active')}
+          >
+            En cours
+          </button>
+          <button
+            className={`${styles.filterButton} ${filterStatus === 'Closed' ? styles.active : ''}`}
+            onClick={() => setFilterStatus('Closed')}
+          >
+            Fermées
+          </button>
+          <button
+            className={`${styles.filterButton} ${filterStatus === 'Finalized' ? styles.active : ''}`}
+            onClick={() => setFilterStatus('Finalized')}
+          >
+            Finalisées
+          </button>
+        </div>
+      </div>
+
+      {/* Résultats */}
+      {filteredElections.length === 0 ? (
+        <div className={styles.emptyState}>
+          <svg className={styles.emptyIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <h3 className={styles.emptyTitle}>Aucune élection trouvée</h3>
+          <p className={styles.emptyText}>
+            {searchQuery || filterStatus !== 'all'
+              ? 'Essayez de modifier vos filtres de recherche'
+              : 'Créez la première élection pour commencer'}
+          </p>
+          {!searchQuery && filterStatus === 'all' && (
+            <button
+              onClick={() => navigate(RouteNamesEnum.createElection)}
+              className={styles.emptyButton}
+            >
+              Créer une élection
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Grille d'élections */}
+          <div className={styles.grid}>
+            {paginatedElections.map((election) => (
+              <ElectionCard key={election.id} election={election} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className={styles.pagination}>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className={styles.paginationButton}
+              >
+                ← Précédent
+              </button>
+
+              <div className={styles.paginationPages}>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`${styles.paginationPage} ${currentPage === page ? styles.active : ''}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className={styles.paginationButton}
+              >
+                Suivant →
+              </button>
+            </div>
+          )}
+
+          {/* Info pagination */}
+          <div className={styles.paginationInfo}>
+            Affichage de {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredElections.length)} sur {filteredElections.length} élection{filteredElections.length > 1 ? 's' : ''}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};

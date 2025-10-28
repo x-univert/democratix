@@ -1,0 +1,253 @@
+import { useNavigate } from 'react-router-dom';
+import { useGetAccount } from 'lib';
+import { useEffect, useState } from 'react';
+import type { Election } from '../../hooks/elections/useGetElection';
+import { useHasVoted } from '../../hooks/elections/useHasVoted';
+import { RouteNamesEnum } from '../../localConstants';
+import styles from './ElectionCard.module.scss';
+
+interface ElectionCardProps {
+  election: Election;
+}
+
+export const ElectionCard = ({ election }: ElectionCardProps) => {
+  const navigate = useNavigate();
+  const { address } = useGetAccount();
+  const { hasVoted: checkHasVoted } = useHasVoted();
+  const [alreadyVoted, setAlreadyVoted] = useState(false);
+
+  // Calculer le statut en fonction des dates et du status
+  const now = Date.now() / 1000; // Timestamp en secondes
+  const isUpcoming = election.start_time > now;
+  const isActive = election.status === 'Active' && election.start_time <= now && election.end_time > now;
+  const isClosed = election.status === 'Closed' || election.end_time < now;
+  const isFinalized = election.status === 'Finalized';
+  const isPending = election.status === 'Pending';
+
+  // Vérifier si l'utilisateur a déjà voté (seulement pour les élections actives)
+  useEffect(() => {
+    if (isActive && address) {
+      checkHasVoted(election.id).then(voted => {
+        setAlreadyVoted(voted);
+      });
+    }
+  }, [isActive, address, election.id]);
+
+  // Vérifier si l'utilisateur connecté est l'organisateur
+  const isOrganizer = address && election.organizer &&
+    address.toLowerCase() === election.organizer.toLowerCase();
+
+  // Déterminer le badge à afficher
+  const getBadge = () => {
+    if (isFinalized) {
+      return { text: 'Finalisée', className: styles.badgeFinalized };
+    }
+    if (isClosed) {
+      return { text: 'Fermée', className: styles.badgeClosed };
+    }
+    if (isActive) {
+      return { text: 'En cours', className: styles.badgeActive };
+    }
+    if (isUpcoming) {
+      return { text: 'À venir', className: styles.badgeUpcoming };
+    }
+    return { text: 'En attente', className: styles.badgePending };
+  };
+
+  const badge = getBadge();
+
+  // Formater les dates avec heure
+  const formatDateTime = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Calculer le taux de participation (mock pour l'instant)
+  const participationRate = election.num_candidates > 0
+    ? Math.min(Math.round((election.total_votes / (election.num_candidates * 100)) * 100), 100)
+    : 0;
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Ne pas naviguer si on clique sur un bouton (sauf viewButton)
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'BUTTON' && !target.classList.contains(styles.viewButton)) {
+      return;
+    }
+    navigate(RouteNamesEnum.electionDetail.replace(':id', election.id.toString()));
+  };
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(RouteNamesEnum.electionDetail.replace(':id', election.id.toString()));
+  };
+
+  const handleAddCandidate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(RouteNamesEnum.addCandidate.replace(':electionId', election.id.toString()));
+  };
+
+  const handleActivate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    // TODO: Implémenter l'activation
+    console.log('Activer élection', election.id);
+  };
+
+  const handleVote = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(RouteNamesEnum.vote.replace(':id', election.id.toString()));
+  };
+
+  // Formater l'adresse pour l'affichage
+  const formatAddress = (addr: string) => {
+    if (!addr || addr.length < 20) return addr;
+    return `${addr.substring(0, 10)}...${addr.substring(addr.length - 6)}`;
+  };
+
+  return (
+    <div className={styles.card} onClick={handleClick}>
+      {/* Badge de statut */}
+      <div className={`${styles.badge} ${badge.className}`}>
+        {badge.text}
+      </div>
+
+      {/* Contenu principal */}
+      <div className={styles.content}>
+        <h3 className={styles.title}>{election.title}</h3>
+
+        {/* Description (hash IPFS pour l'instant) */}
+        <p className={styles.description}>
+          {election.description_ipfs ? (
+            <span className={styles.ipfsHash} title={election.description_ipfs}>
+              IPFS: {election.description_ipfs.substring(0, 20)}...
+            </span>
+          ) : (
+            'Aucune description'
+          )}
+        </p>
+
+        {/* Informations */}
+        <div className={styles.info}>
+          <div className={styles.infoRow}>
+            <span className={styles.label}>Début:</span>
+            <span className={styles.value}>{formatDateTime(election.start_time)}</span>
+          </div>
+          <div className={styles.infoRow}>
+            <span className={styles.label}>Fin:</span>
+            <span className={styles.value}>{formatDateTime(election.end_time)}</span>
+          </div>
+        </div>
+
+        {/* Statistiques */}
+        <div className={styles.stats}>
+          <div className={styles.stat}>
+            <span className={styles.statValue}>{election.num_candidates}</span>
+            <span className={styles.statLabel}>Candidat{election.num_candidates > 1 ? 's' : ''}</span>
+          </div>
+          <div className={styles.stat}>
+            <span className={styles.statValue}>{election.total_votes}</span>
+            <span className={styles.statLabel}>Vote{election.total_votes > 1 ? 's' : ''}</span>
+          </div>
+          {election.total_votes > 0 && (
+            <div className={styles.stat}>
+              <span className={styles.statValue}>{participationRate}%</span>
+              <span className={styles.statLabel}>Participation</span>
+            </div>
+          )}
+        </div>
+
+        {/* Barre de progression pour les élections actives */}
+        {isActive && (
+          <div className={styles.progress}>
+            <div className={styles.progressLabel}>
+              <span>Temps restant</span>
+              <span>{Math.ceil((election.end_time - now) / 86400)} jour{Math.ceil((election.end_time - now) / 86400) > 1 ? 's' : ''}</span>
+            </div>
+            <div className={styles.progressBar}>
+              <div
+                className={styles.progressFill}
+                style={{
+                  width: `${Math.min(100, ((now - election.start_time) / (election.end_time - election.start_time)) * 100)}%`
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Organisateur */}
+        <div className={styles.organizer}>
+          {isOrganizer ? (
+            <span className={styles.organizerLabel}>
+              👤 Vous êtes l'organisateur
+            </span>
+          ) : (
+            <>
+              <span className={styles.organizerLabel}>Organisé par:</span>
+              <span className={styles.organizerValue} title={election.organizer}>
+                {formatAddress(election.organizer)}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className={styles.footer}>
+        {/* Boutons pour l'organisateur en attente */}
+        {isOrganizer && isPending && (
+          <>
+            <div className={styles.organizerActions}>
+              <button
+                className={styles.secondaryButton}
+                onClick={handleAddCandidate}
+              >
+                + Ajouter candidats
+              </button>
+              <button
+                className={styles.activateButton}
+                onClick={handleActivate}
+                disabled={election.num_candidates < 2}
+                title={election.num_candidates < 2 ? 'Il faut au moins 2 candidats pour activer l\'élection' : ''}
+              >
+                Activer l'élection
+                {election.num_candidates < 2 && ` (${election.num_candidates}/2)`}
+              </button>
+            </div>
+            <button className={styles.viewButton} onClick={handleViewDetails}>
+              Voir les détails
+            </button>
+          </>
+        )}
+
+        {/* Boutons pour les élections actives */}
+        {isActive && (
+          <>
+            {alreadyVoted ? (
+              <div className={styles.alreadyVotedBadge}>
+                ✅ Vous avez déjà voté
+              </div>
+            ) : (
+              <button className={styles.voteButton} onClick={handleVote}>
+                Voter maintenant
+              </button>
+            )}
+            <button className={styles.viewButton} onClick={handleViewDetails}>
+              Voir les détails
+            </button>
+          </>
+        )}
+
+        {/* Bouton détails par défaut (non actif, non organisateur, ou finalisé/fermé) */}
+        {!isActive && (!isOrganizer || !isPending) && (
+          <button className={styles.viewButton} onClick={handleViewDetails}>
+            {isFinalized ? 'Voir les résultats' : 'Voir les détails'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};

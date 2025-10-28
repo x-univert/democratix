@@ -1,0 +1,1 @@
+export { ElectionDetail } from './ElectionDetail';

@@ -1,16 +1,20 @@
 import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
+  faBars,
   faBell,
   faPowerOff,
   faWallet,
+  faInfoCircle,
   IconDefinition
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { MouseEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { MouseEvent, useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 
 import { Logo, Tooltip } from 'components';
+import { SettingsModal } from 'components/SettingsModal';
 import { GITHUB_REPO_URL } from 'config';
 import {
   ACCOUNTS_ENDPOINT,
@@ -24,7 +28,6 @@ import {
 } from 'lib';
 import { RouteNamesEnum } from 'localConstants';
 
-import { ThemeTooltip } from './components';
 import styles from './header.styles';
 
 interface HeaderBrowseButtonType {
@@ -37,11 +40,16 @@ interface HeaderBrowseButtonType {
 export const Header = () => {
   const { network } = useGetNetworkConfig();
   const { address } = useGetAccount();
+  const { t } = useTranslation();
 
   const isLoggedIn = useGetIsLoggedIn();
   const provider = getAccountProvider();
   const navigate = useNavigate();
+  const location = useLocation();
   const explorerAddress = network.explorerAddress;
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -64,7 +72,18 @@ export const Header = () => {
     NotificationsFeedManager.getInstance().openNotificationsFeed();
   };
 
+  const handleAboutBrowsing = (event: MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    navigate(RouteNamesEnum.about);
+  };
+
   const headerBrowseButtons: HeaderBrowseButtonType[] = [
+    {
+      label: t('header.about') || 'About',
+      handleClick: handleAboutBrowsing,
+      icon: faInfoCircle,
+      isVisible: true
+    },
     {
       label: 'GitHub',
       handleClick: handleGitHubBrowsing,
@@ -84,15 +103,80 @@ export const Header = () => {
     navigate(isLoggedIn ? RouteNamesEnum.dashboard : RouteNamesEnum.home);
   };
 
+  // Fermer le menu en cliquant à l'extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: Event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  const navigationItems = [
+    { label: t('header.dashboard'), route: RouteNamesEnum.dashboard, icon: '📊' },
+    { label: t('header.elections'), route: RouteNamesEnum.elections, icon: '🗳️' },
+    { label: t('header.admin'), route: RouteNamesEnum.adminDashboard, icon: '⚙️' },
+    { label: t('header.profile'), route: RouteNamesEnum.profile, icon: '👤' }
+  ];
+
+  const activeRoute = navigationItems.find(item => location.pathname.startsWith(item.route));
+
   return (
     <header className={styles.header}>
       <div onClick={handleLogoClick} className={styles.headerLogo}>
         <Logo hideTextOnMobile={true} />
       </div>
 
-      <nav className={styles.headerNavigation}>
-        <ThemeTooltip />
+      {/* Menu de navigation déroulant DEMOCRATIX */}
+      {isLoggedIn && (
+        <div className="relative ml-4" ref={menuRef}>
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="flex items-center gap-2 px-4 py-2 bg-secondary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-all font-medium text-primary"
+          >
+            <span className="text-lg">{activeRoute?.icon || '📋'}</span>
+            <span>{activeRoute?.label || t('header.menu')}</span>
+            <span className={`text-secondary transition-transform text-xs ${isMenuOpen ? 'rotate-180' : ''}`}>
+              ▼
+            </span>
+          </button>
 
+          {isMenuOpen && (
+            <div className="absolute top-full left-0 mt-2 w-48 bg-secondary border-2 border-secondary vibe-border rounded-lg shadow-xl z-50 overflow-hidden animate-fadeIn">
+              {navigationItems.map((item) => (
+                <button
+                  key={item.route}
+                  onClick={() => {
+                    navigate(item.route);
+                    setIsMenuOpen(false);
+                  }}
+                  className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-all ${
+                    location.pathname.startsWith(item.route)
+                      ? 'bg-btn-primary text-btn-primary font-semibold'
+                      : 'text-primary hover:bg-tertiary hover:text-accent'
+                  }`}
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {location.pathname.startsWith(item.route) && (
+                    <span className="ml-auto">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <nav className={styles.headerNavigation}>
         <div className={styles.headerNavigationButtons}>
           {headerBrowseButtons.map((headerBrowseButton) => (
             <Tooltip
@@ -117,12 +201,6 @@ export const Header = () => {
           ))}
         </div>
 
-        <div className={styles.headerNavigationNetwork}>
-          <div className={styles.headerNavigationNetworkLabel}>
-            {network.id}
-          </div>
-        </div>
-
         {isLoggedIn ? (
           <div className={styles.headerNavigationAddress}>
             <FontAwesomeIcon
@@ -141,7 +219,7 @@ export const Header = () => {
             <Tooltip
               place='bottom'
               identifier='disconnect-tooltip-identifier'
-              content='Disconnect'
+              content={t('common.disconnect')}
             >
               {() => (
                 <div
@@ -152,6 +230,24 @@ export const Header = () => {
                 </div>
               )}
             </Tooltip>
+
+            <Tooltip
+              place='bottom'
+              identifier='settings-tooltip-identifier'
+              content={t('header.settings')}
+            >
+              {() => (
+                <div
+                  onClick={() => setIsSettingsOpen(true)}
+                  className={classNames(
+                    styles.headerNavigationAddressLogout,
+                    'ml-2 cursor-pointer hover:bg-tertiary transition-colors'
+                  )}
+                >
+                  <span className="text-lg">⚙️</span>
+                </div>
+              )}
+            </Tooltip>
           </div>
         ) : (
           <div className={styles.headerNavigationConnect}>
@@ -159,7 +255,7 @@ export const Header = () => {
               onClick={handleLogIn}
               className={styles.headerNavigationConnectDesktop}
             >
-              Connect
+              {t('common.connect')}
             </MvxButton>
 
             <div
@@ -174,6 +270,11 @@ export const Header = () => {
           </div>
         )}
       </nav>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </header>
   );
 };

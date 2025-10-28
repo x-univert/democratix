@@ -14,17 +14,23 @@ export const AuthRedirectWrapper = ({ children }: PropsWithChildren) => {
 
   const requireAuth = Boolean(currentRoute?.authenticatedRoute);
 
+  // Routes that authenticated users should be redirected FROM
+  // (these routes only make sense for unauthenticated users)
+  const authOnlyRoutes = [RouteNamesEnum.home, RouteNamesEnum.unlock];
+
   useEffect(() => {
-    if (isLoggedIn && !requireAuth) {
+    // If logged in and on an auth-only route (home/unlock), redirect to dashboard
+    if (isLoggedIn && authOnlyRoutes.includes(pathname as RouteNamesEnum)) {
       navigate(RouteNamesEnum.dashboard);
 
       return;
     }
 
+    // If not logged in and route requires auth, redirect to home
     if (!isLoggedIn && requireAuth) {
       navigate(RouteNamesEnum.home);
     }
-  }, [isLoggedIn, currentRoute]);
+  }, [isLoggedIn, currentRoute, pathname]);
 
   return <>{children}</>;
 };

@@ -1,0 +1,553 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useGetAccount } from 'lib';
+import { useGetElection, type Election } from '../../hooks/elections';
+import { useGetCandidates, type Candidate } from '../../hooks/elections/useGetCandidates';
+import { useGetCandidateVotes } from '../../hooks/elections/useGetCandidateVotes';
+import { useActivateElection } from '../../hooks/transactions/useActivateElection';
+import { useCloseElection } from '../../hooks/transactions/useCloseElection';
+import { RouteNamesEnum } from '../../localConstants';
+import styles from './ElectionDetail.module.scss';
+
+interface CandidateWithVotes extends Candidate {
+  votes: number;
+  percentage: number;
+}
+
+export const ElectionDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { address } = useGetAccount();
+  const { getElection } = useGetElection();
+  const { getCandidates } = useGetCandidates();
+  const { getCandidateVotes } = useGetCandidateVotes();
+  const { activateElection } = useActivateElection();
+  const { closeElection } = useCloseElection();
+
+  const [election, setElection] = useState<Election | null>(null);
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidatesWithVotes, setCandidatesWithVotes] = useState<CandidateWithVotes[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingResults, setLoadingResults] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchElectionAndCandidates = async () => {
+      if (!id) {
+        setError('ID d\'élection manquant');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await getElection(parseInt(id));
+        if (!data) {
+          setError('Élection introuvable');
+        } else {
+          setElection(data);
+
+          // Charger les candidats
+          const candidatesData = await getCandidates(parseInt(id));
+          setCandidates(candidatesData);
+        }
+      } catch (err) {
+        console.error('Erreur lors de la récupération de l\'élection:', err);
+        setError('Erreur lors du chargement de l\'élection');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchElectionAndCandidates();
+  }, [id]);
+
+  // Fetch votes for closed or finalized elections
+  useEffect(() => {
+    const fetchVotes = async () => {
+      console.log('🔄 fetchVotes useEffect triggered');
+      console.log('  election:', election);
+      console.log('  candidates:', candidates);
+      console.log('  candidates.length:', candidates.length);
+
+      if (!election) {
+        console.log('  ⚠️ No election, returning');
+        return;
+      }
+
+      if (candidates.length === 0) {
+        console.log('  ⚠️ No candidates, returning');
+        return;
+      }
+
+      // Check if election is closed or finalized (results available)
+      // Use same logic as the component: check both status AND timestamp
+      const now = Date.now() / 1000;
+      const isClosedByTime = election.end_time < now;
+      const isClosedByStatus = election.status === 'Closed' || election.status === 'Finalized';
+      const canShowResults = isClosedByStatus || isClosedByTime;
+
+      console.log('  now:', now);
+      console.log('  election.end_time:', election.end_time);
+      console.log('  election.status:', election.status);
+      console.log('  isClosedByTime:', isClosedByTime);
+      console.log('  isClosedByStatus:', isClosedByStatus);
+      console.log('  canShowResults:', canShowResults);
+
+      if (!canShowResults) {
+        console.log('  ⚠️ Cannot show results yet, returning');
+        return;
+      }
+
+      console.log('  ✅ Starting to fetch votes for', candidates.length, 'candidates');
+      setLoadingResults(true);
+      try {
+        const votesPromises = candidates.map(async (candidate) => {
+          console.log(`  🔍 Fetching votes for candidate #${candidate.id}: ${candidate.name}`);
+          const votes = await getCandidateVotes(election.id, candidate.id);
+          console.log(`  ✅ Got ${votes} votes for candidate #${candidate.id}`);
+          return { ...candidate, votes, percentage: 0 };
+        });
+
+        const results = await Promise.all(votesPromises);
+        console.log('  📊 All results:', results);
+
+        // Calculate percentages
+        const totalVotes = results.reduce((sum, c) => sum + c.votes, 0);
+        console.log('  📊 Total votes:', totalVotes);
+
+        const withPercentages = results.map(c => ({
+          ...c,
+          percentage: totalVotes > 0 ? Math.round((c.votes / totalVotes) * 100) : 0
+        }));
+
+        // Sort by votes descending
+        withPercentages.sort((a, b) => b.votes - a.votes);
+
+        console.log('  📊 Final results with percentages:', withPercentages);
+        setCandidatesWithVotes(withPercentages);
+      } catch (err) {
+        console.error('❌ Erreur lors du chargement des résultats:', err);
+      } finally {
+        setLoadingResults(false);
+      }
+    };
+
+    fetchVotes();
+  }, [election, candidates]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loadingState}>
+          <div className={styles.spinner}></div>
+          <p>Chargement de l'élection...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !election) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.errorState}>
+          <svg className={styles.errorIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className={styles.errorTitle}>{error || 'Élection introuvable'}</h2>
+          <p className={styles.errorText}>L'élection que vous recherchez n'existe pas ou a été supprimée.</p>
+          <button onClick={() => navigate(RouteNamesEnum.elections)} className={styles.backButton}>
+            ← Retour aux élections
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculs
+  const now = Date.now() / 1000;
+  const isUpcoming = election.start_time > now;
+  const isActive = election.status === 'Active' && election.start_time <= now && election.end_time > now;
+  const isClosed = election.status === 'Closed' || election.end_time < now;
+  const isFinalized = election.status === 'Finalized';
+  const isPending = election.status === 'Pending';
+
+  const isOrganizer = address && election.organizer &&
+    address.toLowerCase() === election.organizer.toLowerCase();
+
+  const formatDateTime = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatAddress = (addr: string) => {
+    if (!addr || addr.length < 20) return addr;
+    return `${addr.substring(0, 10)}...${addr.substring(addr.length - 6)}`;
+  };
+
+  const getBadge = () => {
+    if (isFinalized) return { text: 'Finalisée', className: styles.badgeFinalized };
+    if (isClosed) return { text: 'Fermée', className: styles.badgeClosed };
+    if (isActive) return { text: 'En cours', className: styles.badgeActive };
+    if (isUpcoming) return { text: 'À venir', className: styles.badgeUpcoming };
+    return { text: 'En attente', className: styles.badgePending };
+  };
+
+  const badge = getBadge();
+
+  const handleAddCandidate = () => {
+    navigate(RouteNamesEnum.addCandidate.replace(':electionId', election.id.toString()));
+  };
+
+  const handleActivate = async () => {
+    if (!election) return;
+
+    try {
+      await activateElection(election.id);
+      // Recharger l'élection après activation
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err) {
+      console.error('Erreur lors de l\'activation:', err);
+    }
+  };
+
+  const handleVote = () => {
+    navigate(RouteNamesEnum.vote.replace(':id', election.id.toString()));
+  };
+
+  const handleClose = async () => {
+    if (!election) return;
+
+    const confirmed = window.confirm(
+      'Êtes-vous sûr de vouloir fermer cette élection ? Cette action est irréversible et aucun nouveau vote ne pourra être enregistré.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await closeElection(election.id);
+      // Recharger l'élection après fermeture
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (err) {
+      console.error('Erreur lors de la fermeture:', err);
+      alert('Erreur lors de la fermeture de l\'élection. Vérifiez que vous êtes l\'organisateur.');
+    }
+  };
+
+  const timeRemaining = () => {
+    if (isActive) {
+      const remaining = election.end_time - now;
+      const days = Math.floor(remaining / 86400);
+      const hours = Math.floor((remaining % 86400) / 3600);
+      const minutes = Math.floor((remaining % 3600) / 60);
+
+      if (days > 0) return `${days} jour${days > 1 ? 's' : ''} ${hours}h`;
+      if (hours > 0) return `${hours}h ${minutes}min`;
+      return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+    }
+    if (isUpcoming) {
+      const remaining = election.start_time - now;
+      const days = Math.floor(remaining / 86400);
+      const hours = Math.floor((remaining % 86400) / 3600);
+
+      if (days > 0) return `Débute dans ${days} jour${days > 1 ? 's' : ''}`;
+      return `Débute dans ${hours}h`;
+    }
+    return null;
+  };
+
+  const progressPercent = isActive
+    ? Math.min(100, ((now - election.start_time) / (election.end_time - election.start_time)) * 100)
+    : 0;
+
+  return (
+    <div className={styles.container}>
+      {/* Back button */}
+      <button onClick={() => navigate(RouteNamesEnum.elections)} className={styles.backLink}>
+        ← Retour aux élections
+      </button>
+
+      {/* Header */}
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}>{election.title}</h1>
+            <div className={`${styles.badge} ${badge.className}`}>
+              {badge.text}
+            </div>
+          </div>
+
+          {isOrganizer && (
+            <div className={styles.organizerBadge}>
+              👤 Vous êtes l'organisateur de cette élection
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Time remaining banner (for active elections) */}
+      {(isActive || isUpcoming) && (
+        <div className={isActive ? styles.activeBanner : styles.upcomingBanner}>
+          <svg className={styles.bannerIcon} fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          <span className={styles.bannerText}>{timeRemaining()}</span>
+          {isActive && (
+            <div className={styles.progressBar}>
+              <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Main content */}
+      <div className={styles.content}>
+        {/* Left column */}
+        <div className={styles.leftColumn}>
+          {/* Description */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Description</h2>
+            <div className={styles.description}>
+              {election.description_ipfs ? (
+                <div className={styles.ipfsHash}>
+                  <span className={styles.ipfsLabel}>IPFS Hash:</span>
+                  <code className={styles.ipfsCode} title={election.description_ipfs}>
+                    {election.description_ipfs}
+                  </code>
+                </div>
+              ) : (
+                <p className={styles.noDescription}>Aucune description disponible</p>
+              )}
+            </div>
+          </div>
+
+          {/* Candidates section */}
+          <div className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardTitle}>
+                Candidats ({candidates.length})
+              </h2>
+              {isOrganizer && isPending && (
+                <button onClick={handleAddCandidate} className={styles.addButton}>
+                  + Ajouter
+                </button>
+              )}
+            </div>
+
+            {candidates.length === 0 ? (
+              <div className={styles.emptyState}>
+                <p className={styles.emptyText}>Aucun candidat pour le moment</p>
+                {isOrganizer && isPending && (
+                  <button onClick={handleAddCandidate} className={styles.emptyButton}>
+                    Ajouter le premier candidat
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className={styles.candidatesList}>
+                {candidates.map((candidate) => (
+                  <div key={candidate.id} className={styles.candidateItem}>
+                    <div className={styles.candidateInfo}>
+                      <h3 className={styles.candidateName}>{candidate.name}</h3>
+                      {candidate.description_ipfs && (
+                        <p className={styles.candidateDescription}>
+                          {candidate.description_ipfs}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Results section (for closed or finalized elections) */}
+          {(isFinalized || isClosed) && (
+            <div className={styles.card}>
+              <h2 className={styles.cardTitle}>📊 Résultats de l'élection</h2>
+
+              {loadingResults ? (
+                <div className={styles.loadingResults}>
+                  <div className={styles.spinner}></div>
+                  <p>Chargement des résultats...</p>
+                </div>
+              ) : candidatesWithVotes.length === 0 ? (
+                <div className={styles.comingSoon}>
+                  Aucun résultat disponible
+                </div>
+              ) : (
+                <>
+                  {/* Winner banner */}
+                  {candidatesWithVotes[0] && candidatesWithVotes[0].votes > 0 && (
+                    <div className={styles.winnerBanner}>
+                      <div className={styles.winnerIcon}>🏆</div>
+                      <div className={styles.winnerContent}>
+                        <div className={styles.winnerLabel}>Gagnant</div>
+                        <div className={styles.winnerName}>{candidatesWithVotes[0].name}</div>
+                        <div className={styles.winnerStats}>
+                          {candidatesWithVotes[0].votes} vote{candidatesWithVotes[0].votes > 1 ? 's' : ''}
+                          ({candidatesWithVotes[0].percentage}%)
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Results list */}
+                  <div className={styles.resultsList}>
+                    {candidatesWithVotes.map((candidate, index) => (
+                      <div
+                        key={candidate.id}
+                        className={`${styles.resultItem} ${index === 0 ? styles.resultItemWinner : ''}`}
+                      >
+                        <div className={styles.resultHeader}>
+                          <div className={styles.resultRank}>#{index + 1}</div>
+                          <div className={styles.resultInfo}>
+                            <div className={styles.resultName}>{candidate.name}</div>
+                            {candidate.description_ipfs && (
+                              <div className={styles.resultDescription}>
+                                {candidate.description_ipfs}
+                              </div>
+                            )}
+                          </div>
+                          <div className={styles.resultStats}>
+                            <div className={styles.resultVotes}>
+                              {candidate.votes} vote{candidate.votes > 1 ? 's' : ''}
+                            </div>
+                            <div className={styles.resultPercentage}>
+                              {candidate.percentage}%
+                            </div>
+                          </div>
+                        </div>
+                        <div className={styles.resultProgressBar}>
+                          <div
+                            className={styles.resultProgressFill}
+                            style={{ width: `${candidate.percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Summary */}
+                  <div className={styles.resultsSummary}>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>Total des votes</span>
+                      <span className={styles.summaryValue}>
+                        {candidatesWithVotes.reduce((sum, c) => sum + c.votes, 0)}
+                      </span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>Candidats</span>
+                      <span className={styles.summaryValue}>{candidatesWithVotes.length}</span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Right column (sidebar) */}
+        <div className={styles.rightColumn}>
+          {/* Statistics */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Statistiques</h2>
+            <div className={styles.stats}>
+              <div className={styles.statItem}>
+                <span className={styles.statValue}>{election.num_candidates}</span>
+                <span className={styles.statLabel}>Candidat{election.num_candidates > 1 ? 's' : ''}</span>
+              </div>
+              <div className={styles.statItem}>
+                <span className={styles.statValue}>{election.total_votes}</span>
+                <span className={styles.statLabel}>Vote{election.total_votes > 1 ? 's' : ''}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Dates */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Période de vote</h2>
+            <div className={styles.dates}>
+              <div className={styles.dateItem}>
+                <span className={styles.dateLabel}>Début</span>
+                <span className={styles.dateValue}>{formatDateTime(election.start_time)}</span>
+              </div>
+              <div className={styles.dateItem}>
+                <span className={styles.dateLabel}>Fin</span>
+                <span className={styles.dateValue}>{formatDateTime(election.end_time)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Organizer */}
+          <div className={styles.card}>
+            <h2 className={styles.cardTitle}>Organisateur</h2>
+            <div className={styles.organizerInfo}>
+              <code className={styles.organizerAddress} title={election.organizer}>
+                {formatAddress(election.organizer)}
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText(election.organizer)}
+                className={styles.copyButton}
+                title="Copier l'adresse"
+              >
+                📋
+              </button>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className={styles.actions}>
+            {/* Organizer actions (pending) */}
+            {isOrganizer && isPending && (
+              <>
+                <button
+                  onClick={handleActivate}
+                  className={styles.primaryButton}
+                  disabled={election.num_candidates < 2}
+                  title={election.num_candidates < 2 ? 'Il faut au moins 2 candidats pour activer l\'élection' : ''}
+                >
+                  Activer l'élection
+                  {election.num_candidates < 2 && ` (${election.num_candidates}/2)`}
+                </button>
+              </>
+            )}
+
+            {/* Organizer actions (active) */}
+            {isOrganizer && isActive && (
+              <button onClick={handleClose} className={styles.dangerButton}>
+                Fermer l'élection
+              </button>
+            )}
+
+            {/* Vote button (active elections, non-organizers) */}
+            {isActive && !isOrganizer && (
+              <button onClick={handleVote} className={styles.primaryButton}>
+                Voter maintenant
+              </button>
+            )}
+
+            {/* View results (closed or finalized) */}
+            {(isFinalized || isClosed) && (
+              <button
+                onClick={() => navigate(RouteNamesEnum.results.replace(':id', election.id.toString()))}
+                className={styles.secondaryButton}
+              >
+                📊 Voir les résultats détaillés
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

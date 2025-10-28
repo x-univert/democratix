@@ -1,0 +1,600 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "close": "Close",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "retry": "Retry",
+    "goBack": "Go Back",
+    "notFound": "The resource was not found.",
+    "loadError": "Error loading data. Please try again.",
+    "networkError": "Network error. Check your internet connection.",
+    "permissionDenied": "Permission denied. You do not have access to this resource.",
+    "genericError": "An error occurred. Please try again."
+  },
+  "header": {
+    "dashboard": "Dashboard",
+    "elections": "Elections",
+    "admin": "Admin",
+    "profile": "Profile",
+    "settings": "Settings",
+    "notifications": "Notifications",
+    "menu": "Menu",
+    "about": "About"
+  },
+  "settings": {
+    "title": "Settings",
+    "theme": {
+      "label": "Theme",
+      "dark": "Dark (TealLab)",
+      "light": "Light (BrightLight)",
+      "vibe": "VibeMode",
+      "auto": "Auto"
+    },
+    "network": {
+      "label": "Network",
+      "devnet": "Devnet",
+      "testnet": "Testnet",
+      "mainnet": "Mainnet",
+      "reloadWarning": "⚠️ Reload the page to apply network change"
+    },
+    "language": {
+      "label": "Language",
+      "fr": "Français",
+      "en": "English",
+      "es": "Español"
+    }
+  },
+  "elections": {
+    "title": "Elections",
+    "subtitle": "View and participate in decentralized elections",
+    "createElection": "Create an election",
+    "noElections": "No elections found",
+    "noElectionsSubtitle": "Try adjusting your search filters",
+    "noElectionsEmpty": "Create the first election to get started",
+    "searchPlaceholder": "Search for an election...",
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "active": "Active",
+      "closed": "Closed",
+      "finalized": "Finalized"
+    },
+    "stats": {
+      "total": "Total",
+      "pending": "Pending",
+      "active": "Active",
+      "closed": "Closed",
+      "finalized": "Finalized"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "showing": "Showing {{start}}-{{end}} of {{total}} election"
+    }
+  },
+  "electionCard": {
+    "status": {
+      "finalized": "Finalized",
+      "closed": "Closed",
+      "active": "Active",
+      "upcoming": "Upcoming",
+      "pending": "Pending"
+    },
+    "startDate": "Start:",
+    "endDate": "End:",
+    "candidates": "Candidate",
+    "candidates_plural": "Candidates",
+    "votes": "Vote",
+    "votes_plural": "Votes",
+    "participation": "Participation",
+    "timeRemaining": "Time remaining",
+    "day": "day",
+    "days": "days",
+    "organizedBy": "Organized by:",
+    "youAreOrganizer": "👤 You are the organizer",
+    "actions": {
+      "addCandidates": "+ Add candidates",
+      "activateElection": "Activate election",
+      "activateMinCandidates": "({{count}}/2)",
+      "viewDetails": "View details",
+      "closeOnBlockchain": "Close on blockchain",
+      "expiredWarning": "⚠️ Expired election",
+      "alreadyVoted": "✅ You already voted",
+      "voteNow": "Vote now",
+      "viewResults": "View results",
+      "needsFinalization": "The election is closed. Finalize it on the blockchain.",
+      "finalizeOnBlockchain": "Finalize on blockchain"
+    }
+  },
+  "electionDetail": {
+    "candidates": "Candidates",
+    "description": "Description",
+    "information": "Information",
+    "organizer": "Organizer",
+    "status": "Status",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "totalVotes": "Total votes",
+    "loading": "Loading election...",
+    "loadingMetadata": "Loading metadata...",
+    "loadingResults": "Loading results...",
+    "notFound": "Election not found",
+    "backToElections": "Back to elections",
+    "youAreOrganizer": "👤 You are the organizer of this election",
+    "noDescription": "No description available",
+    "noCandidates": "No candidates yet",
+    "noResults": "No results available",
+    "addButton": "Add",
+    "addFirstCandidate": "Add the first candidate",
+    "resultsPreview": "Results preview",
+    "statistics": "Statistics",
+    "votingPeriod": "Voting period",
+    "start": "Start",
+    "end": "End",
+    "progress": "Vote progress",
+    "copyAddress": "Copy address",
+    "activateButton": "Activate election",
+    "activateTooltip": "At least 2 candidates are required to activate the election",
+    "closeButton": "Close election on blockchain",
+    "finalizeButton": "Finalize election",
+    "finalizeInfo": "The election is closed. Finalize it to officially publish the results.",
+    "expiredWarning": "The voting period has ended. Close the election on the blockchain.",
+    "voteNow": "Vote now",
+    "viewResults": "View detailed results",
+    "confirmClose": "Are you sure you want to close this election? This action is irreversible and no new votes can be recorded.",
+    "confirmModal": {
+      "close": {
+        "title": "Close election",
+        "message": "Are you sure you want to close \"{{electionTitle}}\"? This action is irreversible and no new votes can be recorded after closing.",
+        "confirm": "Yes, close election",
+        "cancel": "No, cancel"
+      },
+      "activate": {
+        "title": "Activate election",
+        "message": "Are you sure you want to activate \"{{electionTitle}}\"? The election will become accessible to voters and will start at the scheduled date.",
+        "confirm": "Yes, activate election",
+        "cancel": "No, not now"
+      },
+      "finalize": {
+        "title": "Finalize election",
+        "message": "Are you sure you want to finalize \"{{electionTitle}}\"? This action will officially publish the results and make the election immutable.",
+        "confirm": "Yes, finalize election",
+        "cancel": "No, not now"
+      }
+    },
+    "time": {
+      "timeRemaining": "Time remaining",
+      "electionStart": "Election start",
+      "day": "day",
+      "days": "days",
+      "minute": "minute",
+      "minutes": "minutes",
+      "startsIn": "Starts in {{days}} {{unit}}",
+      "startsInHours": "Starts in {{hours}}h"
+    },
+    "errors": {
+      "notFound": "Election not found",
+      "notFoundDescription": "The election you are looking for does not exist or has been deleted.",
+      "loadError": "Error loading election",
+      "closeError": "Error closing election. Verify that you are the organizer.",
+      "finalizeError": "Error finalizing election. Verify that you are the organizer and that the election is closed."
+    }
+  },
+  "vote": {
+    "title": "Vote",
+    "website": "Website",
+    "loading": "Loading election...",
+    "notFound": "Election not found",
+    "backToDetails": "Back to details",
+    "selectCandidate": "Select your candidate",
+    "selectCandidateWarning": "Please select a candidate",
+    "confirmVote": "Confirm my vote",
+    "voteFor": "Vote for {{name}}",
+    "alreadyVoted": "You have already voted",
+    "alreadyVotedTitle": "You have already voted",
+    "alreadyVotedMessage": "You have already participated in this election. Your vote has been successfully recorded on the blockchain.",
+    "voteRecorded": "Your vote has been recorded",
+    "noCandidates": "No candidates available for this election.",
+    "electionNotActive": "This election is not active",
+    "voteSuccess": "Vote recorded successfully!",
+    "voteError": "Error while voting. Check that you are connected and have not already voted.",
+    "cancel": "Cancel",
+    "submitting": "Submitting...",
+    "warning": {
+      "title": "Warning:",
+      "message": "Your vote is final and cannot be changed. Make sure of your choice before confirming."
+    },
+    "confirmModal": {
+      "title": "Confirm your vote",
+      "message": "Are you sure you want to vote for {{candidateName}}? This action is irreversible and will be recorded on the blockchain.",
+      "confirm": "Yes, confirm my vote",
+      "cancel": "No, go back"
+    }
+  },
+  "createElection": {
+    "title": "Create an election",
+    "subtitle": "Fill in the information to create a new election",
+    "form": {
+      "electionTitle": "Election title",
+      "titlePlaceholder": "Ex: Presidential Election 2025",
+      "description": "Description",
+      "descriptionPlaceholder": "Describe the objective and rules of this election...",
+      "startDate": "Start date and time",
+      "startDateHint": "The election will start at this date and time",
+      "endDate": "End date and time",
+      "endDateHint": "The election will end at this date and time",
+      "image": "Image (optional)",
+      "imageHint": "Accepted formats: JPG, PNG, GIF (max 5MB)",
+      "category": "Category (optional)",
+      "categoryPlaceholder": "Select a category",
+      "categories": {
+        "presidential": "Presidential",
+        "legislative": "Legislative",
+        "local": "Local",
+        "referendum": "Referendum",
+        "association": "Association",
+        "other": "Other"
+      },
+      "candidates": "Candidates",
+      "candidatesMinimum": "minimum 2",
+      "candidatePlaceholder": "Candidate {{number}}",
+      "addCandidate": "Add a candidate",
+      "cancel": "Cancel",
+      "createButton": "Create election",
+      "uploadingToIPFS": "Uploading to IPFS...",
+      "creatingOnBlockchain": "Creating on blockchain...",
+      "submit": "Create election"
+    },
+    "info": {
+      "uploadingIPFS": "Uploading data to IPFS...",
+      "uploadingIPFSHint": "Your data is being uploaded to the decentralized IPFS network",
+      "sendingTransaction": "Sending transaction to the blockchain...",
+      "sendingTransactionHint": "Please confirm the transaction in your wallet"
+    },
+    "errors": {
+      "invalidImage": "Please select a valid image",
+      "imageTooLarge": "Image must not exceed 5MB",
+      "fillRequired": "Please fill in all required fields",
+      "minCandidates": "You must have at least 2 candidates",
+      "startDateFuture": "Start date must be in the future",
+      "endDateAfterStart": "End date must be after start date",
+      "ipfsUpload": "Error uploading to IPFS. Check your internet connection.",
+      "createElection": "Error creating election. Check that you are connected."
+    },
+    "success": "Election created successfully!",
+    "error": "Error while creating election",
+    "confirmModal": {
+      "title": "Create this election",
+      "message": "Are you sure you want to create the election \"{{electionTitle}}\"? The information will be recorded on the blockchain and IPFS.",
+      "confirm": "Yes, create election",
+      "cancel": "No, go back"
+    }
+  },
+  "addCandidate": {
+    "title": "Add a candidate",
+    "subtitle": "Add a new candidate to this election",
+    "form": {
+      "name": "Candidate name",
+      "namePlaceholder": "Ex: John Doe",
+      "photo": "Candidate photo",
+      "photoHint": "The image will be stored on IPFS (max 5MB)",
+      "biography": "Biography / Program",
+      "biographyPlaceholder": "Describe the candidate, their program, their objectives...",
+      "biographyHint": "This biography will be stored in a decentralized manner on IPFS",
+      "additionalInfo": "Additional information (optional)",
+      "party": "Political party",
+      "partyPlaceholder": "Ex: Democratic Party",
+      "website": "Website",
+      "websitePlaceholder": "https://example.com",
+      "twitter": "Twitter/X",
+      "twitterPlaceholder": "@username",
+      "uploadingToIPFS": "Uploading data to IPFS...",
+      "cancel": "Cancel",
+      "submit": "Add candidate",
+      "uploadingIPFS": "Uploading to IPFS...",
+      "submitting": "Adding..."
+    },
+    "info": {
+      "title": "Information",
+      "organizerOnly": "Only the election organizer can add candidates",
+      "pendingOnly": "Candidates can only be added to pending elections",
+      "noAddAfterActivation": "Once the election is activated, it will no longer be possible to add candidates"
+    },
+    "errors": {
+      "invalidImage": "Please select a valid image",
+      "imageTooLarge": "The image must not exceed 5MB",
+      "addError": "Error adding candidate. Check the console for more details."
+    },
+    "success": "Candidate added successfully!",
+    "error": "Error while adding candidate",
+    "confirmModal": {
+      "title": "Add this candidate",
+      "message": "Are you sure you want to add \"{{candidateName}}\" to this election? The information will be stored on the blockchain and IPFS.",
+      "confirm": "Yes, add candidate",
+      "cancel": "No, go back"
+    }
+  },
+  "results": {
+    "title": "Results",
+    "winner": "Winner",
+    "ofVotes": "of votes",
+    "loading": "Loading results...",
+    "export": "Export to PDF",
+    "shareOn": "Share on {{platform}}",
+    "shareText": "📊 Results of \"{{title}}\": {{name}} wins the election with {{percentage}}% of votes! 🎉",
+    "shareTextNoWinner": "📊 Discover the results of the election \"{{title}}\" on DEMOCRATIX",
+    "stats": {
+      "totalVotes": "Total votes",
+      "totalVote": "Total vote",
+      "winnerScore": "Winner score",
+      "participation": "Participation"
+    },
+    "charts": {
+      "votesByCandidate": "Votes by candidate",
+      "voteDistribution": "Vote distribution"
+    },
+    "electionWinner": "Election winner",
+    "detailedResults": "Detailed results",
+    "noCandidates": "No candidates",
+    "blockchainNotice": "🔒 Verifiable and immutable results on the MultiversX blockchain",
+    "viewAllElections": "← View all elections",
+    "electionDetails": "Election details",
+    "errors": {
+      "notFound": "Results not found",
+      "notAvailable": "Results are not yet available. The election must be closed to display results.",
+      "loadError": "Error loading results"
+    }
+  },
+  "admin": {
+    "title": "Admin Dashboard",
+    "subtitle": "Overview of elections and real-time statistics",
+    "loading": "Loading dashboard...",
+    "auth": {
+      "title": "Connect to access the dashboard",
+      "message": "You must connect to access the admin dashboard",
+      "connect": "Connect"
+    },
+    "globalStats": {
+      "title": "Global Statistics",
+      "total": "Total",
+      "pending": "Pending",
+      "active": "Active",
+      "closed": "Closed",
+      "finalized": "Finalized",
+      "totalVotes": "Total votes",
+      "candidates": "Candidates"
+    },
+    "myElections": {
+      "title": "My Elections",
+      "total": "My elections",
+      "active": "Active",
+      "votesReceived": "Votes received",
+      "candidates": "Candidates"
+    },
+    "charts": {
+      "statusDistribution": "Status distribution",
+      "timeline": "Elections created (last 6 months)",
+      "topParticipation": "Top 5 - My most participative elections",
+      "noData": "No data available",
+      "pending": "Pending",
+      "active": "Active",
+      "closed": "Closed",
+      "finalized": "Finalized",
+      "votes": "Votes",
+      "candidates": "Candidates",
+      "elections": "Elections"
+    },
+    "quickActions": {
+      "title": "Quick actions",
+      "createElection": "Create an election",
+      "createElectionDesc": "Start a new election",
+      "viewAll": "View all elections",
+      "viewAllDesc": "Browse all elections",
+      "myProfile": "My profile",
+      "myProfileDesc": "View my voting history"
+    },
+    "noElections": {
+      "title": "🎯 You haven't created any elections yet",
+      "message": "Start by creating your first election to see your statistics here",
+      "action": "Create my first election"
+    }
+  },
+  "profile": {
+    "title": "My Profile",
+    "subtitle": "View your participation history and statistics",
+    "loading": "Loading your profile...",
+    "auth": {
+      "title": "Connect to view your profile",
+      "message": "You must connect to access your voting history",
+      "connect": "Connect"
+    },
+    "account": {
+      "title": "Account information",
+      "address": "MultiversX Address"
+    },
+    "stats": {
+      "totalVote": "Total vote",
+      "totalVotes": "Total votes",
+      "active": "Active",
+      "closed": "Closed",
+      "closed_plural": "Closed",
+      "finalized": "Finalized",
+      "finalized_plural": "Finalized"
+    },
+    "history": {
+      "title": "Participation history",
+      "noVotes": {
+        "title": "No participation yet",
+        "message": "You haven't voted in an election yet",
+        "action": "Discover elections"
+      }
+    },
+    "card": {
+      "youVoted": "You voted",
+      "end": "End"
+    }
+  },
+  "dashboard": {
+    "title": "Welcome to DEMOCRATIX",
+    "description": {
+      "part1": "DEMOCRATIX is a decentralized voting platform built with",
+      "and": "and",
+      "part2": "on the MultiversX blockchain using",
+      "part3": "for authentication and transaction signing."
+    }
+  },
+  "footer": {
+    "copyright": "© {{year}} Democratix. All rights reserved.",
+    "resources": "Resources",
+    "economics": "Economics",
+    "documentation": "Documentation",
+    "agora": "Agora",
+    "terms": "Terms",
+    "disclaimer": "Disclaimer",
+    "madeWith": "Made with",
+    "byTeam": "by the DEMOCRATIX team, {{year}}",
+    "build": "{{network}} Build"
+  },
+  "home": {
+    "hero": {
+      "title": "Decentralized Voting",
+      "subtitle": "Transparent, Secure, Immutable",
+      "description": "DEMOCRATIX revolutionizes voting with MultiversX blockchain technology. Every vote counts, every voice is heard.",
+      "getStarted": "Get Started",
+      "learnMore": "Learn More"
+    }
+  },
+  "homeHero": {
+    "description": "Decentralized and transparent voting platform built on the MultiversX blockchain.",
+    "connectWallet": "Connect Wallet",
+    "seeDocumentation": "See Documentation"
+  },
+  "about": {
+    "title": "About DEMOCRATIX",
+    "subtitle": "The future of democratic voting is here, powered by blockchain technology",
+    "what": {
+      "title": "What is DEMOCRATIX?",
+      "description1": "DEMOCRATIX is a revolutionary decentralized voting platform built on the MultiversX blockchain. We combine the power of blockchain technology with advanced cryptographic methods to create a voting system that is transparent, secure, and immutable.",
+      "description2": "Our platform ensures that every vote is counted accurately, voter anonymity is preserved, and election results cannot be tampered with. Whether for corporate governance, community decisions, or democratic elections, DEMOCRATIX provides a trustworthy solution."
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1": {
+        "title": "Connect Your Wallet",
+        "description": "Use your MultiversX wallet to connect to the platform securely. Your wallet serves as your digital identity and voting credential."
+      },
+      "step2": {
+        "title": "Browse Elections",
+        "description": "Explore active, pending, and upcoming elections. Each election includes detailed information, candidate profiles, and voting deadlines."
+      },
+      "step3": {
+        "title": "Cast Your Vote",
+        "description": "Select your preferred candidate and submit your vote. Your choice is encrypted and recorded on the blockchain, ensuring anonymity and immutability."
+      },
+      "step4": {
+        "title": "Track Results",
+        "description": "Monitor election progress in real-time. View vote counts, participation rates, and detailed statistics for each candidate."
+      },
+      "step5": {
+        "title": "Verify Transparency",
+        "description": "All votes and results are publicly verifiable on the blockchain. Anyone can audit the election while preserving voter privacy."
+      }
+    },
+    "features": {
+      "title": "Key Features",
+      "blockchain": {
+        "icon": "⛓️",
+        "title": "Blockchain-Based",
+        "description": "Built on MultiversX for high-speed, low-cost, and secure transactions"
+      },
+      "anonymous": {
+        "icon": "🔒",
+        "title": "Anonymous Voting",
+        "description": "Cryptographic techniques ensure your vote remains private and anonymous"
+      },
+      "transparent": {
+        "icon": "👁️",
+        "title": "Transparent Results",
+        "description": "All votes are publicly verifiable on the blockchain ledger"
+      },
+      "decentralized": {
+        "icon": "🌐",
+        "title": "Decentralized",
+        "description": "No single point of control or failure. The power is distributed"
+      },
+      "secure": {
+        "icon": "🛡️",
+        "title": "Secure & Immutable",
+        "description": "Once recorded, votes cannot be altered, deleted, or tampered with"
+      },
+      "ipfs": {
+        "icon": "📦",
+        "title": "IPFS Storage",
+        "description": "Election metadata and images stored on decentralized IPFS network"
+      }
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "q1": {
+        "question": "What is blockchain voting?",
+        "answer": "Blockchain voting uses distributed ledger technology to record votes in a transparent, secure, and immutable way. Each vote is a transaction on the blockchain, making it impossible to alter or delete after it's been cast."
+      },
+      "q2": {
+        "question": "Is my vote anonymous?",
+        "answer": "Yes! DEMOCRATIX uses advanced cryptographic techniques to ensure your vote is completely anonymous. While your transaction is recorded on the blockchain, your actual vote choice is encrypted and cannot be linked to your wallet address."
+      },
+      "q3": {
+        "question": "Do I need cryptocurrency to vote?",
+        "answer": "Yes, you need a small amount of EGLD (MultiversX's native token) to pay for transaction fees (gas). The cost is minimal - typically less than $0.01 per vote."
+      },
+      "q4": {
+        "question": "What is IPFS and why do you use it?",
+        "answer": "IPFS (InterPlanetary File System) is a decentralized storage network. We use it to store election descriptions, candidate information, and images in a distributed way, ensuring data availability and censorship resistance."
+      },
+      "q5": {
+        "question": "Can I change my vote after submitting?",
+        "answer": "No. Once a vote is recorded on the blockchain, it's immutable and cannot be changed. This ensures the integrity of the election results. Make sure you've selected the correct candidate before confirming."
+      },
+      "q6": {
+        "question": "How do I create an election?",
+        "answer": "Connect your wallet, navigate to the 'Create Election' page, fill in the election details (title, description, dates), add candidates with their information, and submit the transaction. Your election will be live on the blockchain!"
+      },
+      "q7": {
+        "question": "What happens after an election closes?",
+        "answer": "When an election ends, it moves to 'Closed' status. The election creator must then finalize the results, which calculates and permanently records the final vote counts on the blockchain."
+      },
+      "q8": {
+        "question": "Is DEMOCRATIX open source?",
+        "answer": "Yes! DEMOCRATIX smart contracts and frontend code are open source. You can audit the code, verify the logic, and even contribute to the project on our GitHub repository."
+      },
+      "q9": {
+        "question": "Which networks does DEMOCRATIX support?",
+        "answer": "Currently, DEMOCRATIX is deployed on MultiversX Devnet (for testing), Testnet (for pre-production), and will soon be available on Mainnet for production use."
+      },
+      "q10": {
+        "question": "How can I trust the results?",
+        "answer": "All votes are recorded on the MultiversX blockchain, which is public and transparent. Anyone can verify the vote counts using blockchain explorers. The smart contract logic is open source and auditable."
+      }
+    },
+    "tech": {
+      "title": "Technology Stack",
+      "frontend": "Frontend",
+      "backend": "Blockchain & Backend"
+    },
+    "cta": {
+      "title": "Ready to Experience Democratic Voting?",
+      "description": "Join thousands of users who trust DEMOCRATIX for transparent and secure elections",
+      "viewElections": "View Elections",
+      "createElection": "Create Election"
+    }
+  }
+}

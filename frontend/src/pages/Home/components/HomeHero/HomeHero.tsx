@@ -1,6 +1,7 @@
 import { Fragment, FunctionComponent, MouseEvent, SVGProps } from 'react';
 import ArrowUpRightIcon from 'assets/icons/arrow-up-right-icon.svg?react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import classNames from 'classnames';
 
 import {
@@ -43,6 +44,7 @@ const themeExtraProperties: Record<
 };
 
 export const HomeHero = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const { allThemeOptions, activeTheme, handleThemeSwitch } =
@@ -72,16 +74,15 @@ export const HomeHero = () => {
     <div className={heroContainerClasses}>
       <div className={styles.heroSectionTop}>
         <div className={styles.heroSectionTopContent}>
-          <h1 className={styles.heroTitle}>dApp Template</h1>
+          <h1 className={styles.heroTitle}>DEMOCRATIX</h1>
 
           <p className={styles.heroDescription}>
-            The sdk-dapp starter project for any dApp built on the MultiversX
-            blockchain.
+            {t('homeHero.description')}
           </p>
         </div>
 
         <div className={styles.heroSectionTopButtons}>
-          <Button onClick={handleLogIn}>Connect Wallet</Button>
+          <Button onClick={handleLogIn}>{t('homeHero.connectWallet')}</Button>
 
           <a
             target='_blank'
@@ -90,7 +91,7 @@ export const HomeHero = () => {
             className={styles.heroSectionTopDocButton}
           >
             <span className={styles.heroSectionTopDocButtonText}>
-              See Documentation
+              {t('homeHero.seeDocumentation')}
             </span>
 
             <ArrowUpRightIcon />

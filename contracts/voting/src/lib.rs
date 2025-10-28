@@ -55,6 +55,10 @@ pub trait VotingContract {
     #[init]
     fn init(&self) {}
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     /// Crée une nouvelle élection
     ///
     /// # Arguments
@@ -135,12 +139,13 @@ pub trait VotingContract {
     fn cast_vote(
         &self,
         election_id: u64,
-        voting_token: ManagedBuffer,
+        _voting_token: ManagedBuffer,
         encrypted_vote: EncryptedVote<Self::Api>,
     ) {
         require!(self.elections(election_id).is_empty() == false, "Élection inexistante");
 
         let mut election = self.elections(election_id).get();
+        let caller = self.blockchain().get_caller();
 
         let current_time = self.blockchain().get_block_timestamp();
         require!(
@@ -148,6 +153,12 @@ pub trait VotingContract {
             "Élection non active"
         );
         require!(election.status == ElectionStatus::Active, "Élection non active");
+
+        // Vérifier que l'utilisateur n'a pas déjà voté
+        require!(
+            !self.voters(election_id, &caller).get(),
+            "Vous avez déjà voté pour cette élection"
+        );
 
         // TODO: Vérifier le token avec le contrat voter-registry
 
@@ -159,6 +170,9 @@ pub trait VotingContract {
             ),
             "Preuve de vote invalide"
         );
+
+        // Enregistrer que cet utilisateur a voté
+        self.voters(election_id, &caller).set(true);
 
         // Stocker le vote chiffré
         self.votes(election_id).push(&encrypted_vote);
@@ -207,6 +221,26 @@ pub trait VotingContract {
         self.election_closed_event(election_id, election.total_votes);
     }
 
+    /// Finalise une élection fermée (changement de statut Closed -> Finalized)
+    /// Cette fonction marque les résultats comme officiellement publiés et immuables
+    #[endpoint(finalizeElection)]
+    fn finalize_election(&self, election_id: u64) {
+        let mut election = self.elections(election_id).get();
+        require!(
+            self.blockchain().get_caller() == election.organizer,
+            "Seul l'organisateur peut finaliser"
+        );
+        require!(
+            election.status == ElectionStatus::Closed,
+            "L'élection doit être fermée avant d'être finalisée"
+        );
+
+        election.status = ElectionStatus::Finalized;
+        self.elections(election_id).set(&election);
+
+        self.election_finalized_event(election_id, election.total_votes);
+    }
+
     // === VIEWS ===
 
     #[view(getElection)]
@@ -217,6 +251,59 @@ pub trait VotingContract {
     #[view(getTotalVotes)]
     fn get_total_votes(&self, election_id: u64) -> u64 {
         self.elections(election_id).get().total_votes
+    }
+
+    #[view(getTotalElections)]
+    fn get_total_elections(&self) -> u64 {
+        self.election_counter().get()
+    }
+
+    #[view(getCandidates)]
+    fn get_candidates(&self, election_id: u64) -> MultiValueEncoded<Candidate<Self::Api>> {
+        let candidates = self.candidates(election_id);
+        let mut result = MultiValueEncoded::new();
+        for candidate in candidates.iter() {
+            result.push(candidate);
+        }
+        result
+    }
+
+    /// Fonction temporaire pour obtenir le nombre de votes par candidat
+    /// NOTE: Dans un vrai système de vote chiffré, cette fonction ne devrait
+    /// être disponible qu'après déchiffrement (après closeElection)
+    #[view(getCandidateVotes)]
+    fn get_candidate_votes(&self, election_id: u64, candidate_id: u32) -> u64 {
+        let votes = self.votes(election_id);
+        let mut count = 0u64;
+
+        // Compter les votes pour ce candidat
+        // Pour la POC, le "chiffrement" est juste l'ID encodé en bytes
+        for vote in votes.iter() {
+            // Vérifier la longueur
+            if vote.encrypted_choice.len() != 4 {
+                // Ignorer les votes mal formés
+                continue;
+            }
+
+            // Utiliser copy_to_array pour extraire les 4 bytes directement
+            let mut bytes = [0u8; 4];
+            let _ = vote.encrypted_choice.load_slice(0, &mut bytes);
+
+            // Convertir 4 bytes en u32 (big-endian)
+            let voted_id = u32::from_be_bytes(bytes);
+
+            if voted_id == candidate_id {
+                count += 1;
+            }
+        }
+
+        count
+    }
+
+    /// Vérifie si une adresse a déjà voté pour une élection
+    #[view(hasVoted)]
+    fn has_voted(&self, election_id: u64, voter: ManagedAddress) -> bool {
+        self.voters(election_id, &voter).get()
     }
 
     // === STORAGE ===
@@ -233,6 +320,10 @@ pub trait VotingContract {
     #[storage_mapper("votes")]
     fn votes(&self, election_id: u64) -> VecMapper<EncryptedVote<Self::Api>>;
 
+    /// Storage mapper pour tracker qui a voté dans chaque élection
+    #[storage_mapper("voters")]
+    fn voters(&self, election_id: u64, voter: &ManagedAddress) -> SingleValueMapper<bool>;
+
     // === EVENTS ===
 
     #[event("electionCreated")]
@@ -247,4 +338,7 @@ pub trait VotingContract {
 
     #[event("electionClosed")]
     fn election_closed_event(&self, #[indexed] election_id: u64, total_votes: u64);
+
+    #[event("electionFinalized")]
+    fn election_finalized_event(&self, #[indexed] election_id: u64, total_votes: u64);
 }

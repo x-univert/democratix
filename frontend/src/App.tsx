@@ -1,14 +1,17 @@
 import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 
 import { PageNotFound } from 'pages/PageNotFound/PageNotFound';
 import { routes } from 'routes';
 import { AxiosInterceptors, BatchTransactionsContextProvider } from 'wrappers';
 
-import { Layout } from './components';
+import { Layout, ScrollToTop } from './components';
 
 export const App = () => {
   return (
     <Router>
+      <ScrollToTop />
+      <Toaster />
       <AxiosInterceptors>
         <BatchTransactionsContextProvider>
           <Layout>

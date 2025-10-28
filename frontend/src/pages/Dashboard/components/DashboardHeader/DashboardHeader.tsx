@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   REACT_LINK,
   SDK_DAPP_PACKAGE_LINK,
@@ -14,36 +15,39 @@ const styles = {
   dashboardHeaderDescriptionText: 'dashboard-header-description-text mx-1'
 } satisfies Record<string, string>;
 
-export const DashboardHeader = () => (
-  <div className={styles.dashboardHeaderContainer}>
-    <div className={styles.dashboardHeaderTitle}>Welcome to dApp Template</div>
+export const DashboardHeader = () => {
+  const { t } = useTranslation();
 
-    <div className={styles.dashboardHeaderDescription}>
-      <span className={styles.dashboardHeaderDescriptionText}>
-        The MultiversX dApp Template, built using the
-      </span>
+  return (
+    <div className={styles.dashboardHeaderContainer}>
+      <div className={styles.dashboardHeaderTitle}>{t('dashboard.title')}</div>
 
-      <DashboardHeaderTextLink linkAddress={REACT_LINK}>
-        React.js
-      </DashboardHeaderTextLink>
+      <div className={styles.dashboardHeaderDescription}>
+        <span className={styles.dashboardHeaderDescriptionText}>
+          {t('dashboard.description.part1')}
+        </span>
 
-      <span className={styles.dashboardHeaderDescriptionText}>and</span>
-      <DashboardHeaderTextLink linkAddress={TYPESCRIPT_LINK}>
-        TypeScript
-      </DashboardHeaderTextLink>
+        <DashboardHeaderTextLink linkAddress={REACT_LINK}>
+          React.js
+        </DashboardHeaderTextLink>
 
-      <span className={styles.dashboardHeaderDescriptionText}>
-        technologies, is a basic implementation of
-      </span>
+        <span className={styles.dashboardHeaderDescriptionText}>{t('dashboard.description.and')}</span>
+        <DashboardHeaderTextLink linkAddress={TYPESCRIPT_LINK}>
+          TypeScript
+        </DashboardHeaderTextLink>
 
-      <DashboardHeaderTextLink linkAddress={SDK_DAPP_PACKAGE_LINK}>
-        @multiversx/sdk-dapp
-      </DashboardHeaderTextLink>
+        <span className={styles.dashboardHeaderDescriptionText}>
+          {t('dashboard.description.part2')}
+        </span>
 
-      <span className={styles.dashboardHeaderDescriptionText}>
-        package, providing the basics for MultiversX authentication and TX
-        signing.
-      </span>
+        <DashboardHeaderTextLink linkAddress={SDK_DAPP_PACKAGE_LINK}>
+          @multiversx/sdk-dapp
+        </DashboardHeaderTextLink>
+
+        <span className={styles.dashboardHeaderDescriptionText}>
+          {t('dashboard.description.part3')}
+        </span>
+      </div>
     </div>
-  </div>
-);
+  );
+};

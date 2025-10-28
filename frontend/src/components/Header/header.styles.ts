@@ -1,6 +1,6 @@
 // prettier-ignore
 export default {
-  header: 'header flex items-center justify-between px-4 h-16 md:h-20 md:px-10',
+  header: 'header flex items-center justify-between px-4 h-16 md:h-20 md:px-10 border-b-4 border-secondary',
   headerLogo: 'header-logo transition-opacity duration-200',
   headerNavigation: 'header-navigation flex items-center gap-2 lg:gap-4',
   headerNavigationButtons: 'header-navigation-buttons flex gap-2 lg:gap-4',

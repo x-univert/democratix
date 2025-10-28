@@ -6,7 +6,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-multiversx-sc = "0.53"
+multiversx-sc = "0.62"
 
 [dev-dependencies]
-multiversx-sc-scenario = "0.53"
+multiversx-sc-scenario = "0.62"

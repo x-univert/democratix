@@ -25,6 +25,10 @@
   --color-link: var(--mvx-link-color);
   --color-success: var(--mvx-success-color);
   --color-error: var(--mvx-error-color);
+  --color-warning: var(--mvx-warning-color);
+  --background-color-success: var(--mvx-success-color);
+  --background-color-error: var(--mvx-error-color);
+  --background-color-warning: var(--mvx-warning-color);
   --border-color-secondary: var(--mvx-border-color-secondary);
   --border-color-logo: var(--mvx-text-color-primary);
 }
@@ -38,6 +42,11 @@
   --mvx-purple-875: #471150;
   --mvx-purple-925: #3c1543;
   --mvx-purple-975: #310339;
+
+  /* Couleurs de status */
+  --mvx-success-color: #10b981;
+  --mvx-error-color: #ef4444;
+  --mvx-warning-color: #f59e0b;
 }
 
 :root[data-mvx-theme='mvx:vibe-theme'],
@@ -61,4 +70,314 @@
   --mvx-button-text-secondary: var(--mvx-neutral-225);
   --mvx-border-color-secondary: var(--mvx-purple-850);
   --mvx-scrollbar-thumb: var(--mvx-purple-925);
+}
+
+/* Classes personnalisées DEMOCRATIX */
+
+/* Badge "Terminée" - noir pour dark themes, blanc pour light theme */
+.finished-badge {
+  color: #000000;
+}
+
+[data-mvx-theme='mvx:light-theme'] .finished-badge {
+  color: #ffffff;
+}
+
+/* Bordures claires pour VibeMode uniquement */
+[data-mvx-theme='mvx:vibe-theme'] .vibe-border {
+  border-color: var(--mvx-purple-150) !important;
+}
+
+/* Barre de progression - fond pour BrightLight */
+[data-mvx-theme='mvx:light-theme'] .progress-bar-bg {
+  background-color: #e5e7eb !important;
+}
+
+/* Boutons spécifiques TealLab */
+/* Bouton "Créer une élection" - texte turquoise au hover */
+[data-mvx-theme='mvx:dark-theme'] .btn-create-election:hover {
+  color: var(--mvx-button-bg-primary) !important;
+}
+
+/* Bouton "Détails" - texte noir au hover */
+[data-mvx-theme='mvx:dark-theme'] .btn-details:hover {
+  color: #000000 !important;
+}
+
+/* Bouton "Voter" - texte turquoise au hover */
+[data-mvx-theme='mvx:dark-theme'] .btn-vote:hover {
+  color: var(--mvx-button-bg-primary) !important;
+}
+
+/* Bouton "Voir les résultats" - texte gris foncé au hover */
+[data-mvx-theme='mvx:dark-theme'] .btn-results:hover {
+  color: #4b5563 !important;
+}
+
+/* Boutons spécifiques VibeMode */
+/* Bouton "Créer une élection" - texte fuchsia au hover */
+[data-mvx-theme='mvx:vibe-theme'] .btn-create-election:hover {
+  color: var(--mvx-fuchsia-550) !important;
+}
+
+/* Bouton "Détails" - texte noir au hover */
+[data-mvx-theme='mvx:vibe-theme'] .btn-details:hover {
+  color: #000000 !important;
+}
+
+/* Bouton "Voter" - texte fuchsia au hover */
+[data-mvx-theme='mvx:vibe-theme'] .btn-vote:hover {
+  color: var(--mvx-fuchsia-550) !important;
+}
+
+/* Bouton "Voir les résultats" - texte purple clair au hover */
+[data-mvx-theme='mvx:vibe-theme'] .btn-results:hover {
+  color: var(--mvx-purple-350) !important;
+}
+
+/* Bouton "Confirmer mon vote" pour tous les themes */
+/* TealLab - texte turquoise au hover */
+[data-mvx-theme='mvx:dark-theme'] .btn-confirm-vote:hover {
+  color: var(--mvx-button-bg-primary) !important;
+}
+
+/* VibeMode - texte fuchsia au hover */
+[data-mvx-theme='mvx:vibe-theme'] .btn-confirm-vote:hover {
+  color: var(--mvx-fuchsia-550) !important;
+}
+
+/* BrightLight - texte bleu au hover */
+[data-mvx-theme='mvx:light-theme'] .btn-confirm-vote:hover {
+  color: var(--mvx-button-bg-primary) !important;
+}
+
+/* Candidats sur page Vote - visibilité du nom */
+
+/* TealLab - nom du candidat */
+[data-mvx-theme='mvx:dark-theme'] .candidate-name {
+  color: var(--mvx-text-color-primary);
+}
+
+[data-mvx-theme='mvx:dark-theme'] .candidate-card:hover .candidate-name {
+  color: var(--mvx-text-accent-color);
+}
+
+[data-mvx-theme='mvx:dark-theme'] .candidate-selected .candidate-name {
+  color: var(--mvx-text-accent-color);
+}
+
+/* VibeMode - nom du candidat */
+[data-mvx-theme='mvx:vibe-theme'] .candidate-name {
+  color: var(--mvx-white);
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .candidate-card:hover .candidate-name {
+  color: var(--mvx-fuchsia-550);
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .candidate-selected .candidate-name {
+  color: var(--mvx-fuchsia-550);
+}
+
+/* BrightLight - nom du candidat avec texte qui s'adapte au fond */
+[data-mvx-theme='mvx:light-theme'] .candidate-name {
+  color: #1f2937;
+}
+
+[data-mvx-theme='mvx:light-theme'] .candidate-card:hover .candidate-name {
+  color: #ffffff;
+}
+
+[data-mvx-theme='mvx:light-theme'] .candidate-selected .candidate-name {
+  color: #ffffff;
+}
+
+/* Animations pour les barres de progression des résultats */
+@keyframes slideIn {
+  from {
+    width: 0%;
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+/* Animation pour le modal de paramètres */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* ========================================
+   ANIMATIONS UI/UX IMPROVEMENTS
+   ======================================== */
+
+/* Page fade-in (pour transitions entre pages) */
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.page-transition {
+  animation: pageFadeIn 0.3s ease-in-out;
+}
+
+/* Slide up (pour modals, toasts) */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Scale bounce (pour boutons, cartes au hover) */
+@keyframes scaleBounce {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-bounce-scale {
+  animation: scaleBounce 0.4s ease-in-out;
+}
+
+/* Shake (pour erreurs) */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Loading shimmer (pour skeletons) */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Hover lift effect */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+/* Button press effect */
+.btn-press {
+  transition: transform 0.1s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Fade-in stagger (pour listes) */
+@keyframes fadeInStagger {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-stagger {
+  animation: fadeInStagger 0.4s ease-out;
+}
+
+/* Smooth transitions globales */
+* {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Loading dots animation */
+@keyframes loadingDots {
+  0%, 20% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.loading-dot {
+  animation: loadingDots 1.4s infinite;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0.4s;
 }
