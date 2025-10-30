@@ -44,27 +44,57 @@ jobs:
       #   working-directory: ./frontend
       #   run: npm run build
 
-      # Step 5: Install Cypress binary
-      - name: Install Cypress binary
+      # Step 5: Verify Cypress installation
+      - name: Verify Cypress installation
         working-directory: ./frontend
-        run: npx cypress install
+        run: |
+          echo "Verifying Cypress is installed..."
+          npx cypress verify
+          echo "Checking for test files..."
+          ls -la cypress/e2e/
+          echo "✅ Cypress is ready!"
 
       # Step 6: Start dev server in background
       - name: Start dev server
         working-directory: ./frontend
-        run: nohup npm run dev > dev-server.log 2>&1 &
+        run: |
+          echo "Starting dev server..."
+          nohup npm run dev > dev-server.log 2>&1 &
+          echo $! > dev-server.pid
+          echo "Dev server started with PID: $(cat dev-server.pid)"
 
       # Step 7: Wait for dev server to be ready
       - name: Wait for server
         working-directory: ./frontend
-        run: npx wait-on http://localhost:3000 --timeout 120000
+        run: |
+          echo "Waiting for server to be ready on http://localhost:3000..."
+          npx wait-on http://localhost:3000 --timeout 120000 || {
+            echo "❌ Server failed to start! Showing server logs:"
+            cat dev-server.log
+            exit 1
+          }
+          echo "✅ Server is ready!"
 
       # Step 8: Run Cypress tests
       - name: Run Cypress E2E tests
         working-directory: ./frontend
-        run: npx cypress run --browser ${{ matrix.browser }}
+        run: |
+          echo "Running Cypress tests..."
+          npx cypress run --browser ${{ matrix.browser }} || {
+            echo "❌ Cypress tests failed! Showing server logs:"
+            cat dev-server.log
+            exit 1
+          }
         env:
           CYPRESS_baseUrl: http://localhost:3000
+
+      # Step 9: Show server logs on failure
+      - name: Show server logs
+        if: failure()
+        working-directory: ./frontend
+        run: |
+          echo "=== Dev Server Logs ==="
+          cat dev-server.log || echo "No server logs found"
 
       # Step 6: Upload test screenshots on failure
       - name: Upload screenshots
