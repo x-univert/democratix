@@ -44,21 +44,15 @@ jobs:
       #   working-directory: ./frontend
       #   run: npm run build
 
-      # Step 5: Setup contract ABIs symlink
+      # Step 5: Setup contract ABIs
       - name: Setup contract ABIs
         working-directory: ./frontend
         run: |
-          echo "Creating symlink for contracts directory..."
-          ln -sf src/contracts contracts || true
-          echo "Checking if symlink was created..."
-          if [ -L contracts ]; then
-            echo "✅ Symlink created successfully!"
-            ls -la contracts/
-          else
-            echo "⚠️ Symlink failed, copying directory instead..."
-            cp -r src/contracts contracts
-            ls -la contracts/
-          fi
+          echo "Copying contracts directory for ABI resolution..."
+          cp -r src/contracts contracts
+          echo "Contracts directory contents:"
+          ls -la contracts/
+          echo "✅ Contract ABIs ready!"
 
       # Step 6: Verify Cypress installation
       - name: Verify Cypress installation
