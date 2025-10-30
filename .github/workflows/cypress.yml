@@ -51,6 +51,7 @@ jobs:
           start: npm run dev
           wait-on: 'http://localhost:3000'
           wait-on-timeout: 120
+          install: false  # Skip install since we already did it in Step 3
           # Record test results to Cypress Dashboard (optional)
           # record: true
           # parallel: true
