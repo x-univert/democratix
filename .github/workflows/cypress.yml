@@ -35,31 +35,36 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         working-directory: ./frontend
-        run: npm install
+        run: |
+          npm install
+          npm install -D wait-on
 
       # Step 4: Build the application (optional, if needed for E2E tests)
       # - name: Build application
       #   working-directory: ./frontend
       #   run: npm run build
 
-      # Step 5: Run Cypress tests
-      - name: Run Cypress tests
-        uses: cypress-io/github-action@v6
-        with:
-          working-directory: ./frontend
-          browser: ${{ matrix.browser }}
-          start: npm run dev
-          wait-on: 'http://localhost:3000'
-          wait-on-timeout: 120
-          install: false  # Skip install since we already did it in Step 3
-          # Record test results to Cypress Dashboard (optional)
-          # record: true
-          # parallel: true
+      # Step 5: Install Cypress binary
+      - name: Install Cypress binary
+        working-directory: ./frontend
+        run: npx cypress install
+
+      # Step 6: Start dev server in background
+      - name: Start dev server
+        working-directory: ./frontend
+        run: nohup npm run dev > dev-server.log 2>&1 &
+
+      # Step 7: Wait for dev server to be ready
+      - name: Wait for server
+        working-directory: ./frontend
+        run: npx wait-on http://localhost:3000 --timeout 120000
+
+      # Step 8: Run Cypress tests
+      - name: Run Cypress E2E tests
+        working-directory: ./frontend
+        run: npx cypress run --browser ${{ matrix.browser }}
         env:
-          # Cypress Dashboard key (optional - add to repository secrets)
-          # CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
-          # GitHub token for Cypress Dashboard
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CYPRESS_baseUrl: http://localhost:3000
 
       # Step 6: Upload test screenshots on failure
       - name: Upload screenshots
