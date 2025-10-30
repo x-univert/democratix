@@ -49,9 +49,16 @@ jobs:
         working-directory: ./frontend
         run: |
           echo "Creating symlink for contracts directory..."
-          ln -s src/contracts contracts
-          ls -la contracts/
-          echo "✅ Contract ABIs linked!"
+          ln -sf src/contracts contracts || true
+          echo "Checking if symlink was created..."
+          if [ -L contracts ]; then
+            echo "✅ Symlink created successfully!"
+            ls -la contracts/
+          else
+            echo "⚠️ Symlink failed, copying directory instead..."
+            cp -r src/contracts contracts
+            ls -la contracts/
+          fi
 
       # Step 6: Verify Cypress installation
       - name: Verify Cypress installation
