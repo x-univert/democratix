@@ -1,0 +1,717 @@
+{
+    "buildInfo": {
+        "rustc": {
+            "version": "1.92.0-nightly",
+            "commitHash": "2aaa62b89d22b570e560731b03e3d2d6f5c3bbce",
+            "commitDate": "2025-10-24",
+            "channel": "Nightly",
+            "short": "rustc 1.92.0-nightly (2aaa62b89 2025-10-24)"
+        },
+        "contractCrate": {
+            "name": "voting",
+            "version": "0.1.0"
+        },
+        "framework": {
+            "name": "multiversx-sc",
+            "version": "0.62.0"
+        }
+    },
+    "docs": [
+        "Smart Contract de Vote",
+        "",
+        "Ce contrat gère la création d'élections, le vote et le stockage des votes chiffrés."
+    ],
+    "name": "VotingContract",
+    "constructor": {
+        "inputs": [],
+        "outputs": []
+    },
+    "upgradeConstructor": {
+        "docs": [
+            "Fonction appelée lors de l'upgrade du contrat"
+        ],
+        "inputs": [],
+        "outputs": []
+    },
+    "endpoints": [
+        {
+            "docs": [
+                "Crée une nouvelle élection",
+                "",
+                "# Arguments",
+                "* `title` - Titre de l'élection",
+                "* `description_ipfs` - Hash IPFS de la description complète",
+                "* `start_time` - Timestamp de début",
+                "* `end_time` - Timestamp de fin",
+                "* `requires_registration` - Inscription obligatoire ou non",
+                "* `registration_deadline` - Date limite d'inscription (optionnel)"
+            ],
+            "name": "createElection",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "title",
+                    "type": "bytes"
+                },
+                {
+                    "name": "description_ipfs",
+                    "type": "bytes"
+                },
+                {
+                    "name": "start_time",
+                    "type": "u64"
+                },
+                {
+                    "name": "end_time",
+                    "type": "u64"
+                },
+                {
+                    "name": "requires_registration",
+                    "type": "bool"
+                },
+                {
+                    "name": "registration_deadline",
+                    "type": "optional<u64>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Ajoute un candidat à une élection"
+            ],
+            "name": "addCandidate",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "candidate_id",
+                    "type": "u32"
+                },
+                {
+                    "name": "name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "description_ipfs",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Inscription d'un électeur à une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection"
+            ],
+            "name": "registerToVote",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Ajoute des adresses à la liste blanche d'une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `addresses` - Liste d'adresses à ajouter"
+            ],
+            "name": "addToWhitelist",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "addresses",
+                    "type": "variadic<Address>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Retire des adresses de la liste blanche"
+            ],
+            "name": "removeFromWhitelist",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "addresses",
+                    "type": "variadic<Address>",
+                    "multi_arg": true
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Génère des codes d'invitation pour une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `count` - Nombre de codes à générer"
+            ],
+            "name": "generateInvitationCodes",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "count",
+                    "type": "u32"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<bytes>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Inscription avec un code d'invitation",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `invitation_code` - Code d'invitation"
+            ],
+            "name": "registerWithInvitationCode",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "invitation_code",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Soumet un vote chiffré",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `voting_token` - Token de vote (vérifié avec voter-registry)",
+                "* `encrypted_vote` - Vote chiffré"
+            ],
+            "name": "castVote",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "_voting_token",
+                    "type": "bytes"
+                },
+                {
+                    "name": "encrypted_vote",
+                    "type": "EncryptedVote"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Active une élection (changement de statut Pending -> Active)"
+            ],
+            "name": "activateElection",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Ferme une élection (changement de statut Active -> Closed)"
+            ],
+            "name": "closeElection",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Finalise une élection fermée (changement de statut Closed -> Finalized)",
+                "Cette fonction marque les résultats comme officiellement publiés et immuables"
+            ],
+            "name": "finalizeElection",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "name": "getElection",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "Election"
+                }
+            ]
+        },
+        {
+            "name": "getTotalVotes",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "getTotalElections",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "name": "getCandidates",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<Candidate>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Fonction temporaire pour obtenir le nombre de votes par candidat",
+                "NOTE: Dans un vrai système de vote chiffré, cette fonction ne devrait",
+                "être disponible qu'après déchiffrement (après closeElection)"
+            ],
+            "name": "getCandidateVotes",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "candidate_id",
+                    "type": "u32"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Vérifie si une adresse a déjà voté pour une élection"
+            ],
+            "name": "hasVoted",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "voter",
+                    "type": "Address"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Vérifie si un électeur est inscrit à une élection"
+            ],
+            "name": "isVoterRegistered",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "voter",
+                    "type": "Address"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bool"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Obtient le nombre d'électeurs inscrits pour une élection"
+            ],
+            "name": "getRegisteredVotersCount",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Récupère la liste des électeurs inscrits (avec pagination)",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `offset` - Position de départ",
+                "* `limit` - Nombre maximum d'adresses à retourner"
+            ],
+            "name": "getRegisteredVoters",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "offset",
+                    "type": "u32"
+                },
+                {
+                    "name": "limit",
+                    "type": "u32"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<Address>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Obtient les statistiques d'inscription pour une élection"
+            ],
+            "name": "getRegistrationStats",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "RegistrationStats"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Récupère le nombre d'inscriptions pour un jour spécifique"
+            ],
+            "name": "getRegistrationsPerDay",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "day_start",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "u32"
+                }
+            ]
+        }
+    ],
+    "events": [
+        {
+            "identifier": "electionCreated",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "organizer",
+                    "type": "Address",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "identifier": "voteCast",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "timestamp",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "identifier": "voterRegistered",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "voter",
+                    "type": "Address",
+                    "indexed": true
+                }
+            ]
+        },
+        {
+            "identifier": "electionClosed",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "total_votes",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "identifier": "electionFinalized",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "total_votes",
+                    "type": "u64"
+                }
+            ]
+        }
+    ],
+    "esdtAttributes": [],
+    "hasCallback": false,
+    "types": {
+        "Candidate": {
+            "type": "struct",
+            "docs": [
+                "Structure représentant un candidat"
+            ],
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "u32"
+                },
+                {
+                    "name": "name",
+                    "type": "bytes"
+                },
+                {
+                    "name": "description_ipfs",
+                    "type": "bytes"
+                }
+            ]
+        },
+        "Election": {
+            "type": "struct",
+            "docs": [
+                "Structure représentant une élection"
+            ],
+            "fields": [
+                {
+                    "name": "id",
+                    "type": "u64"
+                },
+                {
+                    "name": "title",
+                    "type": "bytes"
+                },
+                {
+                    "name": "description_ipfs",
+                    "type": "bytes"
+                },
+                {
+                    "name": "organizer",
+                    "type": "Address"
+                },
+                {
+                    "name": "start_time",
+                    "type": "u64"
+                },
+                {
+                    "name": "end_time",
+                    "type": "u64"
+                },
+                {
+                    "name": "num_candidates",
+                    "type": "u32"
+                },
+                {
+                    "name": "status",
+                    "type": "ElectionStatus"
+                },
+                {
+                    "name": "total_votes",
+                    "type": "u64"
+                },
+                {
+                    "name": "requires_registration",
+                    "type": "bool"
+                },
+                {
+                    "name": "registered_voters_count",
+                    "type": "u64"
+                },
+                {
+                    "name": "registration_deadline",
+                    "type": "Option<u64>"
+                }
+            ]
+        },
+        "ElectionStatus": {
+            "type": "enum",
+            "docs": [
+                "Statut d'une élection"
+            ],
+            "variants": [
+                {
+                    "name": "Pending",
+                    "discriminant": 0
+                },
+                {
+                    "name": "Active",
+                    "discriminant": 1
+                },
+                {
+                    "name": "Closed",
+                    "discriminant": 2
+                },
+                {
+                    "name": "Finalized",
+                    "discriminant": 3
+                }
+            ]
+        },
+        "EncryptedVote": {
+            "type": "struct",
+            "docs": [
+                "Vote chiffré"
+            ],
+            "fields": [
+                {
+                    "name": "encrypted_choice",
+                    "type": "bytes"
+                },
+                {
+                    "name": "proof",
+                    "type": "bytes"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "u64"
+                }
+            ]
+        },
+        "RegistrationStats": {
+            "type": "struct",
+            "docs": [
+                "Statistiques d'inscription pour une élection"
+            ],
+            "fields": [
+                {
+                    "name": "total_registered",
+                    "type": "u64"
+                },
+                {
+                    "name": "last_registration_timestamp",
+                    "type": "u64"
+                }
+            ]
+        }
+    }
+}
