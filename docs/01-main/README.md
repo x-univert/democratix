@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![MultiversX](https://img.shields.io/badge/blockchain-MultiversX-00D4FF.svg)](https://multiversx.com)
 [![Status](https://img.shields.io/badge/status-POC-orange.svg)]()
+[![Cypress E2E Tests](https://github.com/x-univert/DEMOCRATIX/actions/workflows/cypress.yml/badge.svg)](https://github.com/x-univert/DEMOCRATIX/actions/workflows/cypress.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
@@ -68,8 +69,8 @@ DEMOCRATIX/
 
 ```bash
 # Cloner le repository
-git clone https://github.com/[votre-org]/democratix.git
-cd democratix
+git clone https://github.com/x-univert/DEMOCRATIX.git
+cd DEMOCRATIX
 
 # Installer les dépendances backend
 cd backend
@@ -154,6 +155,39 @@ cd ../voter-registry
 cargo test
 ```
 
+### Frontend E2E (Cypress)
+
+**Tests complets implémentés** ✅ :
+- ✅ **01-home-navigation.cy.ts** - Navigation et page d'accueil (17 tests)
+- ✅ **02-elections-list.cy.ts** - Liste et filtrage des élections (27 tests)
+- ✅ **03-election-detail.cy.ts** - Détails d'élection et candidats (28 tests)
+- ✅ **04-profile-admin.cy.ts** - Profil utilisateur et dashboard admin (25 tests)
+- ✅ **05-internationalization.cy.ts** - Multi-langues FR/EN/ES (40 tests)
+- ✅ **06-ui-ux.cy.ts** - UI/UX, accessibilité, responsive (67 tests)
+- ✅ **07-full-workflow.cy.ts** - Workflow complet création → vote → résultats (56 tests)
+
+**Total : 260+ tests E2E**
+
+```bash
+cd frontend
+
+# Lancer les tests Cypress en mode headless
+npm run cypress:run
+
+# Ouvrir l'interface Cypress pour tests interactifs
+npm run cypress:open
+
+# Lancer les tests sur un navigateur spécifique
+npx cypress run --browser chrome
+npx cypress run --browser firefox
+npx cypress run --browser edge
+```
+
+**Tests automatiques via GitHub Actions** :
+- Les tests s'exécutent automatiquement sur chaque push/PR
+- Résultats visibles dans l'onglet "Actions" de GitHub
+- Screenshots et vidéos sauvegardés en cas d'échec
+
 ### Backend (TODO)
 
 ```bash
@@ -228,7 +262,7 @@ npm test
 - [x] Documentation complète
 - [x] Smart contracts POC
 - [x] Backend API
-- [ ] Tests end-to-end
+- [x] Tests end-to-end (260+ tests Cypress E2E)
 - [ ] Audit sécurité initial
 
 ### Q2 2025
@@ -283,7 +317,7 @@ Nous accueillons les contributions ! Consultez notre [guide de contribution](./C
 ## 📞 Contact & Communauté
 
 - **Email** : contact@democratix.vote
-- **GitHub** : https://github.com/[votre-org]/democratix
+- **GitHub** : https://github.com/x-univert/DEMOCRATIX
 - **Discord** : [À créer]
 - **Twitter** : [À créer]
 
@@ -320,9 +354,9 @@ Nous croyons que le code des systèmes de vote doit être **100% open source** p
 
 ## 📈 Statistiques
 
-![GitHub stars](https://img.shields.io/github/stars/[votre-org]/democratix?style=social)
-![GitHub forks](https://img.shields.io/github/forks/[votre-org]/democratix?style=social)
-![GitHub issues](https://img.shields.io/github/issues/[votre-org]/democratix)
+![GitHub stars](https://img.shields.io/github/stars/x-univert/DEMOCRATIX?style=social)
+![GitHub forks](https://img.shields.io/github/forks/x-univert/DEMOCRATIX?style=social)
+![GitHub issues](https://img.shields.io/github/issues/x-univert/DEMOCRATIX)
 
 ---
 

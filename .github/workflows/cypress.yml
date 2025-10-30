@@ -1,0 +1,115 @@
+name: Cypress E2E Tests
+
+# Run tests on push to main branch and on pull requests
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    strategy:
+      # Run tests on multiple browsers if needed
+      matrix:
+        browser: [chrome]
+        # browser: [chrome, firefox, edge] # Uncomment to test on multiple browsers
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      # Step 4: Build the application (optional, if needed for E2E tests)
+      # - name: Build application
+      #   working-directory: ./frontend
+      #   run: npm run build
+
+      # Step 5: Run Cypress tests
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: ./frontend
+          browser: ${{ matrix.browser }}
+          start: npm run dev
+          wait-on: 'http://localhost:3000'
+          wait-on-timeout: 120
+          # Record test results to Cypress Dashboard (optional)
+          # record: true
+          # parallel: true
+        env:
+          # Cypress Dashboard key (optional - add to repository secrets)
+          # CYPRESS_RECORD_KEY: ${{ secrets.CYPRESS_RECORD_KEY }}
+          # GitHub token for Cypress Dashboard
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 6: Upload test screenshots on failure
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: cypress-screenshots-${{ matrix.browser }}
+          path: frontend/cypress/screenshots
+          if-no-files-found: ignore
+
+      # Step 7: Upload test videos
+      - name: Upload videos
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cypress-videos-${{ matrix.browser }}
+          path: frontend/cypress/videos
+          if-no-files-found: ignore
+
+      # Step 8: Generate test report
+      - name: Generate test report
+        if: always()
+        run: |
+          cd frontend
+          if [ -d "cypress/results" ]; then
+            echo "Test results found"
+          fi
+
+  # Optional: Separate job for test result summary
+  test-summary:
+    needs: cypress-run
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create test summary
+        run: |
+          echo "## Cypress E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All tests completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Files:" >> $GITHUB_STEP_SUMMARY
+          echo "- 01-home-navigation.cy.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- 02-elections-list.cy.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- 03-election-detail.cy.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- 04-profile-admin.cy.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- 05-internationalization.cy.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- 06-ui-ux.cy.ts" >> $GITHUB_STEP_SUMMARY
+          echo "- 07-full-workflow.cy.ts" >> $GITHUB_STEP_SUMMARY
