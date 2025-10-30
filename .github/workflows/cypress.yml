@@ -44,7 +44,16 @@ jobs:
       #   working-directory: ./frontend
       #   run: npm run build
 
-      # Step 5: Verify Cypress installation
+      # Step 5: Setup contract ABIs symlink
+      - name: Setup contract ABIs
+        working-directory: ./frontend
+        run: |
+          echo "Creating symlink for contracts directory..."
+          ln -s src/contracts contracts
+          ls -la contracts/
+          echo "✅ Contract ABIs linked!"
+
+      # Step 6: Verify Cypress installation
       - name: Verify Cypress installation
         working-directory: ./frontend
         run: |
@@ -67,8 +76,8 @@ jobs:
       - name: Wait for server
         working-directory: ./frontend
         run: |
-          echo "Waiting for server to be ready on http://localhost:3000..."
-          npx wait-on http://localhost:3000 --timeout 120000 || {
+          echo "Waiting for server to be ready on https://localhost:3000..."
+          npx wait-on https://localhost:3000 --timeout 120000 --insecure || {
             echo "❌ Server failed to start! Showing server logs:"
             cat dev-server.log
             exit 1
@@ -80,13 +89,11 @@ jobs:
         working-directory: ./frontend
         run: |
           echo "Running Cypress tests..."
-          npx cypress run --browser ${{ matrix.browser }} || {
+          npx cypress run --browser ${{ matrix.browser }} --config baseUrl=https://localhost:3000 || {
             echo "❌ Cypress tests failed! Showing server logs:"
             cat dev-server.log
             exit 1
           }
-        env:
-          CYPRESS_baseUrl: http://localhost:3000
 
       # Step 9: Show server logs on failure
       - name: Show server logs
