@@ -77,24 +77,36 @@ jobs:
       - name: Wait for server
         working-directory: ./frontend
         run: |
-          echo "Waiting for server to be ready on https://localhost:3000..."
-          npx wait-on https://localhost:3000 --timeout 120000 --insecure || {
-            echo "❌ Server failed to start! Showing server logs:"
+          echo "Waiting for server to be ready..."
+          # Wait 10 seconds for Vite to start
+          sleep 10
+
+          # Check if process is still running
+          if kill -0 $(cat dev-server.pid) 2>/dev/null; then
+            echo "✅ Dev server is running (PID: $(cat dev-server.pid))"
+            echo "Server logs:"
+            tail -20 dev-server.log
+          else
+            echo "❌ Server process died! Full logs:"
             cat dev-server.log
             exit 1
-          }
-          echo "✅ Server is ready!"
+          fi
 
       # Step 8: Run Cypress tests
       - name: Run Cypress E2E tests
         working-directory: ./frontend
         run: |
           echo "Running Cypress tests..."
-          npx cypress run --browser ${{ matrix.browser }} --config baseUrl=https://localhost:3000 || {
+          npx cypress run \
+            --browser ${{ matrix.browser }} \
+            --config baseUrl=https://localhost:3000,chromeWebSecurity=false \
+            || {
             echo "❌ Cypress tests failed! Showing server logs:"
             cat dev-server.log
             exit 1
           }
+        env:
+          NODE_TLS_REJECT_UNAUTHORIZED: 0
 
       # Step 9: Show server logs on failure
       - name: Show server logs
