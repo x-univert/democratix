@@ -70,7 +70,7 @@ export class ElectionController {
         success: true,
         message: 'Transaction prepared successfully',
         data: {
-          transaction: transaction.toPlainObject(),
+          transaction: transaction,
           ipfsHash,
           candidates: candidatesWithIpfs,
         },
@@ -179,7 +179,7 @@ export class ElectionController {
         success: true,
         message: 'Activation transaction prepared',
         data: {
-          transaction: transaction.toPlainObject(),
+          transaction: transaction,
         },
       });
     } catch (error: any) {
@@ -210,7 +210,7 @@ export class ElectionController {
         success: true,
         message: 'Closure transaction prepared',
         data: {
-          transaction: transaction.toPlainObject(),
+          transaction: transaction,
         },
       });
     } catch (error: any) {

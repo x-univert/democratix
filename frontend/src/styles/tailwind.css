@@ -36,7 +36,7 @@
 :root {
   --mvx-slate-75: #f8f8ff;
   --mvx-fuchsia-550: #f04dff;
-  --mvx-purple-150: #ddcedb;
+  --mvx-purple-150: #e8dde6; /* Lightened for WCAG AA contrast (was #ddcedb) */
   --mvx-purple-350: #b5a0b9;
   --mvx-purple-850: #431c4e;
   --mvx-purple-875: #471150;
@@ -49,6 +49,17 @@
   --mvx-warning-color: #f59e0b;
 }
 
+/* Override text-secondary for ALL themes to ensure WCAG AA contrast */
+:root[data-mvx-theme='mvx:dark-theme'],
+[data-mvx-theme='mvx:dark-theme'] {
+  --mvx-text-color-secondary: #d1d5db; /* gray-300 - 8.3:1 contrast on dark bg */
+}
+
+:root[data-mvx-theme='mvx:light-theme'],
+[data-mvx-theme='mvx:light-theme'] {
+  --mvx-text-color-secondary: #4b5563; /* gray-600 - 5.7:1 contrast on white bg */
+}
+
 :root[data-mvx-theme='mvx:vibe-theme'],
 [data-mvx-theme='mvx:vibe-theme'] {
   --mvx-bg-color-primary: var(--mvx-purple-925);
@@ -57,7 +68,7 @@
   --mvx-bg-accent-variant-color: var(--mvx-purple-925);
   --mvx-hover-color-primary: var(--mvx-purple-850);
   --mvx-text-color-primary: var(--mvx-white);
-  --mvx-text-color-secondary: var(--mvx-purple-350);
+  --mvx-text-color-secondary: var(--mvx-purple-150); /* Changed from purple-350 to purple-150 for better contrast (WCAG AA) */
   --mvx-text-color-tertiary: var(--mvx-slate-75);
   --mvx-text-accent-color: var(--mvx-fuchsia-550);
   --mvx-link-color: var(--mvx-purple-150);
@@ -81,6 +92,15 @@
 
 [data-mvx-theme='mvx:light-theme'] .finished-badge {
   color: #ffffff;
+}
+
+/* Badge "Fermée" - adapté à chaque thème */
+.closed-badge {
+  color: #000000; /* Noir par défaut (dark-theme et vibe-theme) */
+}
+
+[data-mvx-theme='mvx:light-theme'] .closed-badge {
+  color: #ffffff; /* Blanc pour light theme */
 }
 
 /* Bordures claires pour VibeMode uniquement */
@@ -380,4 +400,14 @@
 
 .loading-dot:nth-child(3) {
   animation-delay: 0.4s;
+}
+
+/* Fix form labels visibility on dark themes */
+[data-mvx-theme='mvx:dark-theme'] label,
+[data-mvx-theme='mvx:vibe-theme'] label {
+  color: var(--mvx-text-color-primary) !important;
+}
+
+[data-mvx-theme='mvx:light-theme'] label {
+  color: var(--mvx-text-color-primary) !important;
 }

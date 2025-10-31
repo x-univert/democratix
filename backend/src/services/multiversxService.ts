@@ -4,20 +4,21 @@ import {
 } from '@multiversx/sdk-network-providers';
 import {
   Address,
-  SmartContract,
-  AbiRegistry,
-  ResultsParser,
   Transaction,
   TransactionWatcher,
-  Account,
   U64Value,
   BytesValue,
-  StringValue,
   VariadicValue,
   Struct,
   Field,
+  SmartContractTransactionsFactory,
+  SmartContractQuery,
+  SmartContractTransactionsOutcomeParser,
+  TransactionsFactoryConfig,
+  TokenTransfer,
 } from '@multiversx/sdk-core';
 import { logger } from '../utils/logger';
+import { CandidateType, EncryptedVoteType } from '../types/multiversxTypes';
 
 export interface ElectionData {
   id: number;
@@ -36,39 +37,81 @@ export interface ElectionData {
 }
 
 /**
- * Service pour interagir avec les smart contracts MultiversX
+ * Service pour interagir avec les smart contracts MultiversX (SDK v15)
  */
 export class MultiversXService {
-  private networkProvider: ApiNetworkProvider;
+  private apiProvider: ApiNetworkProvider;
   private proxyProvider: ProxyNetworkProvider;
-  private votingContract: SmartContract;
-  private voterRegistryContract: SmartContract;
-  private resultsParser: ResultsParser;
+  private transactionsFactory: SmartContractTransactionsFactory;
+  private outcomeParser: SmartContractTransactionsOutcomeParser;
+  private votingContractAddress: Address;
+  private voterRegistryAddress: Address;
+  private chainID: string;
+
+  /**
+   * Helper: Encode u64 value to Uint8Array for queries
+   */
+  private encodeU64(value: number): Uint8Array {
+    const hex = value.toString(16).padStart(16, '0');
+    return this.hexToUint8Array(hex);
+  }
+
+  /**
+   * Helper: Encode hex string to Uint8Array for queries
+   */
+  private encodeHex(hexValue: string): Uint8Array {
+    // Remove '0x' prefix if present
+    const hex = hexValue.startsWith('0x') ? hexValue.slice(2) : hexValue;
+    return this.hexToUint8Array(hex);
+  }
+
+  /**
+   * Helper: Convert hex string to Uint8Array
+   */
+  private hexToUint8Array(hex: string): Uint8Array {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+    }
+    return bytes;
+  }
 
   constructor() {
     const apiUrl = process.env.MULTIVERSX_API_URL || 'https://devnet-api.multiversx.com';
     const gatewayUrl = process.env.MULTIVERSX_GATEWAY_URL || 'https://devnet-gateway.multiversx.com';
 
-    this.networkProvider = new ApiNetworkProvider(apiUrl);
+    this.apiProvider = new ApiNetworkProvider(apiUrl);
     this.proxyProvider = new ProxyNetworkProvider(gatewayUrl);
 
-    const votingContractAddress = process.env.VOTING_CONTRACT || '';
-    const voterRegistryAddress = process.env.VOTER_REGISTRY_CONTRACT || '';
+    const votingContract = process.env.VOTING_CONTRACT_ADDRESS || '';
+    const voterRegistry = process.env.VOTER_REGISTRY_CONTRACT_ADDRESS || '';
 
-    this.votingContract = new SmartContract({
-      address: new Address(votingContractAddress),
+    // Only create addresses if they are provided
+    if (!votingContract || !voterRegistry) {
+      logger.warn('Smart contract addresses not configured. Please set VOTING_CONTRACT_ADDRESS and VOTER_REGISTRY_CONTRACT_ADDRESS in .env');
+      // Use placeholder addresses to avoid crashes
+      this.votingContractAddress = Address.newFromBech32('erd1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6gq4hu');
+      this.voterRegistryAddress = Address.newFromBech32('erd1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq6gq4hu');
+    } else {
+      this.votingContractAddress = Address.newFromBech32(votingContract);
+      this.voterRegistryAddress = Address.newFromBech32(voterRegistry);
+    }
+
+    this.chainID = process.env.MULTIVERSX_NETWORK === 'mainnet' ? '1' : 'D';
+
+    // Initialize SDK v15 components
+    const factoryConfig = new TransactionsFactoryConfig({ chainID: this.chainID });
+    this.transactionsFactory = new SmartContractTransactionsFactory({
+      config: factoryConfig,
     });
 
-    this.voterRegistryContract = new SmartContract({
-      address: new Address(voterRegistryAddress),
-    });
+    this.outcomeParser = new SmartContractTransactionsOutcomeParser();
 
-    this.resultsParser = new ResultsParser();
-
-    logger.info('MultiversXService initialized', {
+    logger.info('MultiversXService initialized (SDK v15)', {
       network: process.env.MULTIVERSX_NETWORK,
-      votingContract: votingContractAddress,
-      voterRegistryContract: voterRegistryAddress,
+      votingContract,
+      voterRegistry,
+      chainID: this.chainID,
     });
   }
 
@@ -78,7 +121,7 @@ export class MultiversXService {
    * NOTE: Cette fonction prépare la transaction mais ne la signe pas.
    * La signature doit être faite côté frontend avec le wallet de l'utilisateur.
    */
-  prepareCreateElectionTransaction(params: {
+  async prepareCreateElectionTransaction(params: {
     title: string;
     descriptionIpfs: string;
     startTime: number;
@@ -89,7 +132,7 @@ export class MultiversXService {
       description_ipfs: string;
     }>;
     sender: string;
-  }): Transaction {
+  }): Promise<Transaction> {
     try {
       logger.info('Preparing create election transaction', {
         title: params.title,
@@ -98,25 +141,31 @@ export class MultiversXService {
 
       // Convertir les candidats en format attendu par le smart contract
       const candidatesArgs = params.candidates.map(c =>
-        Struct.fromJSON({
-          id: new U64Value(c.id),
-          name: BytesValue.fromUTF8(c.name),
-          description_ipfs: BytesValue.fromUTF8(c.description_ipfs),
-        })
+        new Struct(CandidateType, [
+          new Field(new U64Value(c.id), 'id'),
+          new Field(BytesValue.fromUTF8(c.name), 'name'),
+          new Field(BytesValue.fromUTF8(c.description_ipfs || ''), 'description_ipfs'),
+        ])
       );
 
-      const transaction = this.votingContract.methods
-        .createElection([
-          BytesValue.fromUTF8(params.title),
-          BytesValue.fromUTF8(params.descriptionIpfs),
-          new U64Value(params.startTime),
-          new U64Value(params.endTime),
-          VariadicValue.fromItems(...candidatesArgs),
-        ])
-        .withSender(new Address(params.sender))
-        .withGasLimit(20_000_000)
-        .withChainID(process.env.MULTIVERSX_NETWORK === 'mainnet' ? 1 : 'D')
-        .buildTransaction();
+      const senderAddress = Address.newFromBech32(params.sender);
+
+      // Créer la transaction avec la nouvelle API v15
+      const transaction = await this.transactionsFactory.createTransactionForExecute(
+        senderAddress,
+        {
+          contract: this.votingContractAddress,
+          function: 'createElection',
+          gasLimit: 20_000_000n,
+          arguments: [
+            BytesValue.fromUTF8(params.title),
+            BytesValue.fromUTF8(params.descriptionIpfs),
+            new U64Value(params.startTime),
+            new U64Value(params.endTime),
+            VariadicValue.fromItems(...candidatesArgs),
+          ],
+        }
+      );
 
       return transaction;
     } catch (error: any) {
@@ -134,34 +183,34 @@ export class MultiversXService {
     try {
       logger.info('Fetching election from blockchain', { electionId });
 
-      const query = this.votingContract.methods
-        .getElection([new U64Value(electionId)])
-        .buildQuery();
+      const query = new SmartContractQuery({
+        contract: this.votingContractAddress,
+        function: 'getElection',
+        arguments: [this.encodeU64(electionId)],
+      });
 
-      const queryResponse = await this.networkProvider.queryContract(query);
+      const queryResponse = await this.proxyProvider.queryContract(query as any);
 
       if (!queryResponse.returnData || queryResponse.returnData.length === 0) {
         logger.warn('Election not found', { electionId });
         return null;
       }
 
-      // Parser la réponse (à adapter selon le format exact retourné par le SC)
-      const parsedResults = this.resultsParser.parseQueryResponse(
-        queryResponse,
-        this.votingContract.getEndpoint('getElection')
-      );
+      // Parser la réponse manuellement (sans ABI dans cette version)
+      // Note: Avec ABI, on pourrait utiliser parsedResponse = controller.parseQueryResponse(response)
+      const returnData = queryResponse.returnData;
 
-      // Convertir en ElectionData (à adapter selon la structure exacte)
+      // Convertir en ElectionData (à adapter selon la structure exacte du smart contract)
       const election: ElectionData = {
         id: electionId,
-        title: parsedResults.values[0].valueOf(),
-        description_ipfs: parsedResults.values[1].valueOf(),
-        organizer: parsedResults.values[2].valueOf().bech32(),
-        start_time: parsedResults.values[3].valueOf().toNumber(),
-        end_time: parsedResults.values[4].valueOf().toNumber(),
-        candidates: parsedResults.values[5].valueOf(),
-        status: parsedResults.values[6].valueOf(),
-        total_votes: parsedResults.values[7].valueOf().toNumber(),
+        title: Buffer.from(returnData[0], 'base64').toString('utf8'),
+        description_ipfs: Buffer.from(returnData[1], 'base64').toString('utf8'),
+        organizer: new Address(Buffer.from(returnData[2], 'base64')).toBech32(),
+        start_time: Number(Buffer.from(returnData[3], 'base64').readBigUInt64BE()),
+        end_time: Number(Buffer.from(returnData[4], 'base64').readBigUInt64BE()),
+        candidates: [], // À parser selon structure
+        status: Buffer.from(returnData[6], 'base64').toString('utf8'),
+        total_votes: Number(Buffer.from(returnData[7], 'base64').readBigUInt64BE()),
       };
 
       logger.info('Election fetched successfully', { electionId });
@@ -180,17 +229,17 @@ export class MultiversXService {
    */
   async getTotalVotes(electionId: number): Promise<number> {
     try {
-      const query = this.votingContract.methods
-        .getTotalVotes([new U64Value(electionId)])
-        .buildQuery();
+      const query = new SmartContractQuery({
+        contract: this.votingContractAddress,
+        function: 'getTotalVotes',
+        arguments: [this.encodeU64(electionId)],
+      });
 
-      const queryResponse = await this.networkProvider.queryContract(query);
-      const parsedResults = this.resultsParser.parseQueryResponse(
-        queryResponse,
-        this.votingContract.getEndpoint('getTotalVotes')
+      const queryResponse = await this.proxyProvider.queryContract(query as any);
+
+      const totalVotes = Number(
+        Buffer.from(queryResponse.returnData[0], 'base64').readBigUInt64BE()
       );
-
-      const totalVotes = parsedResults.values[0].valueOf().toNumber();
 
       logger.info('Total votes fetched', { electionId, totalVotes });
       return totalVotes;
@@ -206,25 +255,30 @@ export class MultiversXService {
   /**
    * Préparer une transaction d'enregistrement d'électeur
    */
-  prepareRegisterVoterTransaction(params: {
+  async prepareRegisterVoterTransaction(params: {
     electionId: number;
     credentialProof: string;
     sender: string;
-  }): Transaction {
+  }): Promise<Transaction> {
     try {
       logger.info('Preparing register voter transaction', {
         electionId: params.electionId,
       });
 
-      const transaction = this.voterRegistryContract.methods
-        .registerVoter([
-          new U64Value(params.electionId),
-          BytesValue.fromHex(params.credentialProof),
-        ])
-        .withSender(new Address(params.sender))
-        .withGasLimit(10_000_000)
-        .withChainID(process.env.MULTIVERSX_NETWORK === 'mainnet' ? 1 : 'D')
-        .buildTransaction();
+      const senderAddress = Address.newFromBech32(params.sender);
+
+      const transaction = await this.transactionsFactory.createTransactionForExecute(
+        senderAddress,
+        {
+          contract: this.voterRegistryAddress,
+          function: 'registerVoter',
+          gasLimit: 10_000_000n,
+          arguments: [
+            new U64Value(params.electionId),
+            BytesValue.fromHex(params.credentialProof),
+          ],
+        }
+      );
 
       return transaction;
     } catch (error: any) {
@@ -240,20 +294,18 @@ export class MultiversXService {
    */
   async isTokenValid(electionId: number, token: string): Promise<boolean> {
     try {
-      const query = this.voterRegistryContract.methods
-        .isTokenValid([
-          new U64Value(electionId),
-          BytesValue.fromHex(token),
-        ])
-        .buildQuery();
+      const query = new SmartContractQuery({
+        contract: this.voterRegistryAddress,
+        function: 'isTokenValid',
+        arguments: [
+          this.encodeU64(electionId),
+          this.encodeHex(token),
+        ],
+      });
 
-      const queryResponse = await this.networkProvider.queryContract(query);
-      const parsedResults = this.resultsParser.parseQueryResponse(
-        queryResponse,
-        this.voterRegistryContract.getEndpoint('isTokenValid')
-      );
+      const queryResponse = await this.proxyProvider.queryContract(query as any);
 
-      const isValid = parsedResults.values[0].valueOf();
+      const isValid = Buffer.from(queryResponse.returnData[0], 'base64').readUInt8() === 1;
 
       logger.info('Token validation result', { electionId, isValid });
       return isValid;
@@ -269,34 +321,39 @@ export class MultiversXService {
   /**
    * Préparer une transaction de vote
    */
-  prepareCastVoteTransaction(params: {
+  async prepareCastVoteTransaction(params: {
     electionId: number;
     votingToken: string;
     encryptedVote: string;
     proof: string;
     sender: string;
-  }): Transaction {
+  }): Promise<Transaction> {
     try {
       logger.info('Preparing cast vote transaction', {
         electionId: params.electionId,
       });
 
-      const encryptedVoteStruct = Struct.fromJSON({
-        encrypted_choice: BytesValue.fromHex(params.encryptedVote),
-        proof: BytesValue.fromHex(params.proof),
-        timestamp: new U64Value(Math.floor(Date.now() / 1000)),
-      });
+      const encryptedVoteStruct = new Struct(EncryptedVoteType, [
+        new Field(BytesValue.fromHex(params.encryptedVote), 'encrypted_choice'),
+        new Field(BytesValue.fromHex(params.proof), 'proof'),
+        new Field(new U64Value(Math.floor(Date.now() / 1000)), 'timestamp'),
+      ]);
 
-      const transaction = this.votingContract.methods
-        .castVote([
-          new U64Value(params.electionId),
-          BytesValue.fromHex(params.votingToken),
-          encryptedVoteStruct,
-        ])
-        .withSender(new Address(params.sender))
-        .withGasLimit(15_000_000)
-        .withChainID(process.env.MULTIVERSX_NETWORK === 'mainnet' ? 1 : 'D')
-        .buildTransaction();
+      const senderAddress = Address.newFromBech32(params.sender);
+
+      const transaction = await this.transactionsFactory.createTransactionForExecute(
+        senderAddress,
+        {
+          contract: this.votingContractAddress,
+          function: 'castVote',
+          gasLimit: 15_000_000n,
+          arguments: [
+            new U64Value(params.electionId),
+            BytesValue.fromHex(params.votingToken),
+            encryptedVoteStruct,
+          ],
+        }
+      );
 
       return transaction;
     } catch (error: any) {
@@ -310,17 +367,22 @@ export class MultiversXService {
   /**
    * Préparer une transaction d'activation d'élection
    */
-  prepareActivateElectionTransaction(params: {
+  async prepareActivateElectionTransaction(params: {
     electionId: number;
     sender: string;
-  }): Transaction {
+  }): Promise<Transaction> {
     try {
-      const transaction = this.votingContract.methods
-        .activateElection([new U64Value(params.electionId)])
-        .withSender(new Address(params.sender))
-        .withGasLimit(5_000_000)
-        .withChainID(process.env.MULTIVERSX_NETWORK === 'mainnet' ? 1 : 'D')
-        .buildTransaction();
+      const senderAddress = Address.newFromBech32(params.sender);
+
+      const transaction = await this.transactionsFactory.createTransactionForExecute(
+        senderAddress,
+        {
+          contract: this.votingContractAddress,
+          function: 'activateElection',
+          gasLimit: 5_000_000n,
+          arguments: [new U64Value(params.electionId)],
+        }
+      );
 
       return transaction;
     } catch (error: any) {
@@ -334,17 +396,22 @@ export class MultiversXService {
   /**
    * Préparer une transaction de fermeture d'élection
    */
-  prepareCloseElectionTransaction(params: {
+  async prepareCloseElectionTransaction(params: {
     electionId: number;
     sender: string;
-  }): Transaction {
+  }): Promise<Transaction> {
     try {
-      const transaction = this.votingContract.methods
-        .closeElection([new U64Value(params.electionId)])
-        .withSender(new Address(params.sender))
-        .withGasLimit(5_000_000)
-        .withChainID(process.env.MULTIVERSX_NETWORK === 'mainnet' ? 1 : 'D')
-        .buildTransaction();
+      const senderAddress = Address.newFromBech32(params.sender);
+
+      const transaction = await this.transactionsFactory.createTransactionForExecute(
+        senderAddress,
+        {
+          contract: this.votingContractAddress,
+          function: 'closeElection',
+          gasLimit: 5_000_000n,
+          arguments: [new U64Value(params.electionId)],
+        }
+      );
 
       return transaction;
     } catch (error: any) {
@@ -362,8 +429,9 @@ export class MultiversXService {
     try {
       logger.info('Waiting for transaction', { txHash });
 
-      const watcher = new TransactionWatcher(this.networkProvider);
-      const transactionOnNetwork = await watcher.awaitCompleted({ getHash: () => txHash }, timeout);
+      // En v15, TransactionWatcher utilise apiProvider comme fetcher
+      const watcher = new TransactionWatcher(this.apiProvider as any);
+      const transactionOnNetwork = await watcher.awaitCompleted(txHash);
 
       const isSuccessful = transactionOnNetwork.status.isSuccessful();
 
@@ -383,8 +451,8 @@ export class MultiversXService {
    */
   async getNetworkStatus(): Promise<any> {
     try {
-      const networkConfig = await this.networkProvider.getNetworkConfig();
-      const networkStatus = await this.networkProvider.getNetworkStatus();
+      const networkConfig = await this.apiProvider.getNetworkConfig();
+      const networkStatus = await this.apiProvider.getNetworkStatus();
 
       return {
         chainId: networkConfig.ChainID,

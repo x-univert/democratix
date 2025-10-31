@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useHandleThemeManagement } from 'hooks/useHandleThemeManagement';
+import { useFocusTrap } from 'hooks/useFocusTrap';
 import { ThemeTooltipDots } from '../Header/components/ThemeTooltip/components/ThemeTooltipDots';
 import { useGetNetworkConfig } from 'lib';
 
@@ -39,7 +40,8 @@ const NETWORK_LABELS: Record<Network, string> = {
 };
 
 export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useFocusTrap(isOpen);
+  const clickOutsideRef = useRef<HTMLDivElement>(null);
   const { activeTheme, handleThemeSwitch } = useHandleThemeManagement();
   const { network } = useGetNetworkConfig();
   const { t, i18n } = useTranslation();
@@ -66,7 +68,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   // Fermer le modal en cliquant à l'extérieur
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+      if (clickOutsideRef.current && !clickOutsideRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
@@ -150,19 +152,26 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-end pt-20 pr-4">
       <div
-        ref={modalRef}
+        ref={(el) => {
+          (modalRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+          (clickOutsideRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        }}
         className="bg-secondary border-2 border-secondary vibe-border rounded-xl shadow-2xl p-6 w-80 animate-fadeIn"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-modal-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-primary flex items-center gap-2">
-            <span className="text-2xl">⚙️</span>
+          <h2 id="settings-modal-title" className="text-xl font-bold text-primary flex items-center gap-2">
+            <span className="text-2xl" role="img" aria-label="Settings">⚙️</span>
             {t('settings.title')}
           </h2>
           <button
             onClick={onClose}
             className="text-secondary hover:text-primary text-2xl leading-none transition-colors"
             aria-label={t('common.close')}
+            type="button"
           >
             ×
           </button>
@@ -173,6 +182,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           <button
             onClick={() => setIsThemeOpen(!isThemeOpen)}
             className="w-full flex items-center justify-between px-4 py-3 bg-primary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-all"
+            type="button"
+            aria-expanded={isThemeOpen}
+            aria-controls="theme-options"
           >
             <div className="flex items-center gap-3">
               {themeMode === 'auto' ? (
@@ -190,7 +202,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </button>
 
           {isThemeOpen && (
-            <div className="mt-2 flex flex-col gap-2 pl-2">
+            <div id="theme-options" className="mt-2 flex flex-col gap-2 pl-2">
               {/* Thèmes MultiversX */}
               {(['mvx:dark-theme', 'mvx:light-theme', 'mvx:vibe-theme'] as const).map((t) => (
                 <button
@@ -204,6 +216,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                       ? 'bg-btn-primary text-btn-primary shadow-md'
                       : 'bg-primary text-secondary border border-secondary hover:bg-tertiary'
                   }`}
+                  type="button"
+                  role="radio"
+                  aria-checked={themeMode === t}
                 >
                   <ThemeTooltipDots dotColors={THEME_DOT_COLORS[t]} size="large" />
                   <span className="flex-1">{THEME_LABELS[t]}</span>
@@ -224,6 +239,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                     ? 'bg-btn-primary text-btn-primary shadow-md'
                     : 'bg-primary text-secondary border border-secondary hover:bg-tertiary'
                 }`}
+                type="button"
+                role="radio"
+                aria-checked={themeMode === 'auto'}
               >
                 <span className="text-xl">🔄</span>
                 <span className="flex-1">{THEME_LABELS['auto']}</span>
@@ -240,6 +258,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           <button
             onClick={() => setIsNetworkOpen(!isNetworkOpen)}
             className="w-full flex items-center justify-between px-4 py-3 bg-primary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-all"
+            type="button"
+            aria-expanded={isNetworkOpen}
+            aria-controls="network-options"
           >
             <div className="flex items-center gap-3">
               <span className="text-xl">
@@ -257,7 +278,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </button>
 
           {isNetworkOpen && (
-            <div className="mt-2 flex flex-col gap-2 pl-2">
+            <div id="network-options" className="mt-2 flex flex-col gap-2 pl-2">
               {(['devnet', 'testnet', 'mainnet'] as Network[]).map((net) => (
                 <button
                   key={net}
@@ -270,6 +291,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                       ? 'bg-btn-primary text-btn-primary shadow-md'
                       : 'bg-primary text-secondary border border-secondary hover:bg-tertiary'
                   }`}
+                  type="button"
+                  role="radio"
+                  aria-checked={selectedNetwork === net}
                 >
                   <span className="text-xl">
                     {net === 'devnet' && '🔧'}
@@ -297,6 +321,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           <button
             onClick={() => setIsLanguageOpen(!isLanguageOpen)}
             className="w-full flex items-center justify-between px-4 py-3 bg-primary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-all"
+            type="button"
+            aria-expanded={isLanguageOpen}
+            aria-controls="language-options"
           >
             <div className="flex items-center gap-3">
               <span className="text-xl">
@@ -314,7 +341,7 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           </button>
 
           {isLanguageOpen && (
-            <div className="mt-2 flex flex-col gap-2 pl-2">
+            <div id="language-options" className="mt-2 flex flex-col gap-2 pl-2">
               {(['fr', 'en', 'es'] as Language[]).map((lang) => (
                 <button
                   key={lang}
@@ -327,6 +354,9 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
                       ? 'bg-btn-primary text-btn-primary shadow-md'
                       : 'bg-primary text-secondary border border-secondary hover:bg-tertiary'
                   }`}
+                  type="button"
+                  role="radio"
+                  aria-checked={language === lang}
                 >
                   <span className="text-xl">
                     {lang === 'fr' && '🇫🇷'}

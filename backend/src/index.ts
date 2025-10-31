@@ -6,6 +6,8 @@ import electionRoutes from './routes/elections';
 import voterRoutes from './routes/voters';
 import voteRoutes from './routes/votes';
 import cryptoRoutes from './routes/crypto';
+import zkProofRoutes from './routes/zkProof';
+import { zkVerifier } from './services/zkVerifierService';
 
 dotenv.config();
 
@@ -32,6 +34,7 @@ app.use('/api/elections', electionRoutes);
 app.use('/api/voters', voterRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/crypto', cryptoRoutes);
+app.use('/api/zk', zkProofRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -41,11 +44,27 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  logger.info(`🚀 DEMOCRATIX Backend démarré sur le port ${PORT}`);
-  logger.info(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`⛓️  Réseau MultiversX: ${process.env.MULTIVERSX_NETWORK}`);
-});
+// Initialize zkVerifier and start server
+async function startServer() {
+  try {
+    // Initialiser le service zk-SNARK
+    logger.info('🔐 Initializing zk-SNARK verifier...');
+    await zkVerifier.initialize();
+    logger.info('✅ zk-SNARK verifier initialized successfully');
+
+    // Démarrer le serveur
+    app.listen(PORT, () => {
+      logger.info(`🚀 DEMOCRATIX Backend démarré sur le port ${PORT}`);
+      logger.info(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
+      logger.info(`⛓️  Réseau MultiversX: ${process.env.MULTIVERSX_NETWORK}`);
+      logger.info(`🔐 zk-SNARK endpoints: /api/zk/*`);
+    });
+  } catch (error) {
+    logger.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export default app;

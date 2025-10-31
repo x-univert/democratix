@@ -62,11 +62,20 @@
     "noElectionsEmpty": "Créez la première élection pour commencer",
     "searchPlaceholder": "Rechercher une élection...",
     "filters": {
-      "all": "Toutes",
+      "all": "Tous les statuts",
       "pending": "En attente",
       "active": "En cours",
       "closed": "Fermées",
       "finalized": "Finalisées"
+    },
+    "categoryFilters": {
+      "all": "Toutes les catégories",
+      "presidential": "Présidentielle",
+      "legislative": "Législative",
+      "local": "Locale",
+      "referendum": "Référendum",
+      "association": "Association",
+      "other": "Autre"
     },
     "stats": {
       "total": "Total",
@@ -95,6 +104,13 @@
     "candidates_plural": "Candidats",
     "votes": "Vote",
     "votes_plural": "Votes",
+    "registered": "Inscrits",
+    "registrationRequired": "Inscription requise",
+    "registrationHint": "Code d'invitation requis",
+    "registerButton": "S'inscrire",
+    "registerWithCode": "S'inscrire avec un code",
+    "checking": "Vérification...",
+    "notRegistered": "Non inscrit",
     "participation": "Participation",
     "timeRemaining": "Temps restant",
     "day": "jour",
@@ -104,7 +120,11 @@
     "actions": {
       "addCandidates": "+ Ajouter candidats",
       "activateElection": "Activer l'élection",
+      "activating": "Activation...",
       "activateMinCandidates": "({{count}}/2)",
+      "needMinCandidates": "Vous devez avoir au moins 2 candidats pour activer l'élection",
+      "activationSuccess": "Élection activée avec succès !",
+      "activationError": "Erreur lors de l'activation de l'élection",
       "viewDetails": "Voir les détails",
       "closeOnBlockchain": "Fermer sur la blockchain",
       "expiredWarning": "⚠️ Élection expirée",
@@ -150,6 +170,59 @@
     "expiredWarning": "La période de vote est terminée. Fermez l'élection sur la blockchain.",
     "voteNow": "Voter maintenant",
     "viewResults": "Voir les résultats détaillés",
+    "registrationRequired": "Inscription requise pour cette élection",
+    "registrationRequiredHint": "Vous devez vous inscrire avant de pouvoir voter à cette élection.",
+    "registerButton": "S'inscrire à cette élection",
+    "registered": "Vous êtes inscrit à cette élection",
+    "checking": "Vérification...",
+    "registrationDeadline": "Date limite d'inscription",
+    "registrationOpen": "Inscriptions ouvertes",
+    "registrationClosed": "Inscriptions closes",
+    "or": "ou",
+    "kycRequired": "Inscription avec vérification d'identité",
+    "kycHint": "Pour participer à cette élection, vous devez compléter un processus de vérification d'identité (KYC) hors blockchain. L'organisateur vous fournira ensuite un code d'invitation unique.",
+    "kycSteps": "Étapes : 1) Créer votre adresse MultiversX 2) Compléter le KYC 3) Recevoir votre code d'invitation 4) S'inscrire ci-dessous",
+    "whitelist": {
+      "title": "Liste Blanche d'Adresses",
+      "description": "Ajoutez des adresses à la liste blanche pour les pré-inscrire automatiquement.",
+      "addressesLabel": "Adresses vérifiées (une par ligne ou séparées par des virgules)",
+      "addButton": "✅ Inscrire automatiquement ces adresses",
+      "hint": "Importez un CSV avec les adresses vérifiées en copiant-collant le contenu ici.",
+      "kycTitle": "Inscription automatique après KYC",
+      "kycDescription": "Les adresses ajoutées à la liste blanche sont automatiquement inscrites. Utilisez cette méthode après avoir vérifié l'identité de vos électeurs via votre processus KYC hors blockchain.",
+      "kycSteps": "Processus : 1) Électeur complète KYC 2) Électeur fournit son adresse MultiversX 3) Vous ajoutez l'adresse ici 4) Inscription automatique confirmée",
+      "noAddresses": "Aucune adresse valide trouvée",
+      "success": "Adresses ajoutées avec succès",
+      "error": "Erreur lors de l'ajout à la liste blanche"
+    },
+    "invitationCodes": {
+      "title": "Codes d'Invitation",
+      "description": "Générez des codes d'invitation uniques que les électeurs pourront utiliser pour s'inscrire.",
+      "countLabel": "Nombre de codes à générer",
+      "generateButton": "Générer les codes",
+      "hint": "Les codes générés s'afficheront automatiquement ici et dans une fenêtre modale.",
+      "securityHint": "Sécurité : Distribuez chaque code de manière sécurisée à un seul électeur vérifié. Une fois utilisé, le code ne peut plus être réutilisé.",
+      "kycTitle": "Alternative : Codes d'invitation après KYC",
+      "kycDescription": "Générez des codes uniques à usage unique que vous distribuerez aux électeurs après leur vérification KYC. Chaque code permet une seule inscription.",
+      "kycFlow": "Flux : 1) Électeur complète KYC 2) Vous générez et envoyez un code 3) Électeur s'inscrit avec le code 4) Code marqué comme utilisé",
+      "invalidCount": "Nombre invalide (1-1000)",
+      "success": "Codes générés avec succès",
+      "error": "Erreur lors de la génération des codes",
+      "registerWithCode": "Entrez votre code d'invitation",
+      "codePlaceholder": "Collez votre code ici...",
+      "registerButton": "S'inscrire",
+      "codeInfo": "Le code d'invitation est un identifiant unique à usage unique fourni par l'organisateur.",
+      "registerSuccess": "Inscription réussie avec le code d'invitation",
+      "registerError": "Erreur lors de l'inscription avec le code"
+    },
+    "export": {
+      "title": "Export de la Liste",
+      "description": "Exportez la liste complète des électeurs inscrits pour audit ou transparence.",
+      "totalRegistered": "Inscrits",
+      "csvButton": "Export CSV",
+      "jsonButton": "Export JSON",
+      "error": "Erreur lors de l'export"
+    },
     "confirmClose": "Êtes-vous sûr de vouloir fermer cette élection ? Cette action est irréversible et aucun nouveau vote ne pourra être enregistré.",
     "confirmModal": {
       "close": {
@@ -186,7 +259,8 @@
       "notFoundDescription": "L'élection que vous recherchez n'existe pas ou a été supprimée.",
       "loadError": "Erreur lors du chargement de l'élection",
       "closeError": "Erreur lors de la fermeture de l'élection. Vérifiez que vous êtes l'organisateur.",
-      "finalizeError": "Erreur lors de la finalisation de l'élection. Vérifiez que vous êtes l'organisateur et que l'élection est fermée."
+      "finalizeError": "Erreur lors de la finalisation de l'élection. Vérifiez que vous êtes l'organisateur et que l'élection est fermée.",
+      "mustRegister": "Vous devez vous inscrire avant de pouvoir voter à cette élection."
     }
   },
   "vote": {
@@ -203,6 +277,10 @@
     "alreadyVotedTitle": "Vous avez déjà voté",
     "alreadyVotedMessage": "Vous avez déjà participé à cette élection. Votre vote a été enregistré avec succès sur la blockchain.",
     "voteRecorded": "Votre vote a été enregistré",
+    "notRegistered": "Non inscrit",
+    "notRegisteredTitle": "Inscription requise",
+    "notRegisteredMessage": "Vous devez vous inscrire avant de pouvoir voter à cette élection.",
+    "goToRegistration": "S'inscrire maintenant",
     "noCandidates": "Aucun candidat disponible pour cette élection.",
     "electionNotActive": "Cette élection n'est pas active",
     "voteSuccess": "Vote enregistré avec succès!",
@@ -232,6 +310,11 @@
       "startDateHint": "L'élection commencera à cette date et heure",
       "endDate": "Date et heure de fin",
       "endDateHint": "L'élection se terminera à cette date et heure",
+      "requiresRegistration": "Inscription obligatoire pour voter",
+      "requiresRegistrationHint": "Les électeurs devront s'inscrire avant de pouvoir voter. Cela permet de calculer le taux de participation réel.",
+      "registrationDeadline": "Date limite d'inscription",
+      "registrationDeadlineHint": "La date limite d'inscription doit être AVANT la date de début du vote",
+      "optional": "optionnel",
       "image": "Image (optionnel)",
       "imageHint": "Formats acceptés: JPG, PNG, GIF (max 5MB)",
       "category": "Catégorie (optionnel)",
@@ -379,6 +462,17 @@
       "active": "Actives",
       "votesReceived": "Votes reçus",
       "candidates": "Candidats"
+    },
+    "myElectionsList": {
+      "title": "Mes Élections Organisées",
+      "noResults": "Aucune élection trouvée avec ce filtre"
+    },
+    "filters": {
+      "all": "Toutes",
+      "pending": "En attente",
+      "active": "Actives",
+      "closed": "Fermées",
+      "finalized": "Finalisées"
     },
     "charts": {
       "statusDistribution": "Répartition par statut",
@@ -596,5 +690,8 @@
       "viewElections": "Voir les élections",
       "createElection": "Créer une élection"
     }
+  },
+  "accessibility": {
+    "skipToMainContent": "Aller au contenu principal"
   }
 }

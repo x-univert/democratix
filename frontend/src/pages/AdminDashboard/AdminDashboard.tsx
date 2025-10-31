@@ -28,6 +28,7 @@ export const AdminDashboard = () => {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
   const [myElections, setMyElections] = useState<Election[]>([]);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Active' | 'Closed' | 'Finalized'>('all');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +114,37 @@ export const AdminDashboard = () => {
       .map(([date, count]) => ({ date, count }));
   }, [elections]);
 
+  // Filtrer mes élections selon le statut
+  const filteredMyElections = useMemo(() => {
+    if (filterStatus === 'all') return myElections;
+    return myElections.filter(e => e.status === filterStatus);
+  }, [myElections, filterStatus]);
+
+  const formatDateTime = (timestamp: number) => {
+    return new Date(timestamp * 1000).toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Pending':
+        return { text: t('electionCard.status.pending'), bgClass: 'bg-warning', textClass: 'text-white' };
+      case 'Active':
+        return { text: t('electionCard.status.active'), bgClass: 'bg-success', textClass: 'text-white' };
+      case 'Closed':
+        return { text: t('electionCard.status.closed'), bgClass: 'bg-tertiary', textClass: 'text-secondary' };
+      case 'Finalized':
+        return { text: t('electionCard.status.finalized'), bgClass: 'bg-accent', textClass: 'text-primary' };
+      default:
+        return { text: status, bgClass: 'bg-secondary', textClass: 'text-primary' };
+    }
+  };
+
   if (!address) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -195,7 +227,7 @@ export const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Mes élections */}
+      {/* Mes élections - Statistiques */}
       {myElections.length > 0 && (
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-primary mb-4">{t('admin.myElections.title')}</h2>
@@ -217,6 +249,164 @@ export const AdminDashboard = () => {
               <span className="text-xs text-secondary font-medium uppercase tracking-wide">{t('admin.myElections.candidates')}</span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Liste de mes élections avec filtres */}
+      {myElections.length > 0 && (
+        <div className="mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+            <h2 className="text-2xl font-bold text-primary">
+              📋 {t('admin.myElectionsList.title') || 'Mes Élections Organisées'}
+            </h2>
+
+            {/* Filtres de statut */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setFilterStatus('all')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  filterStatus === 'all'
+                    ? 'bg-accent text-white'
+                    : 'bg-secondary text-secondary border border-secondary hover:bg-tertiary'
+                }`}
+              >
+                {t('admin.filters.all') || 'Toutes'} ({myElections.length})
+              </button>
+              <button
+                onClick={() => setFilterStatus('Pending')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  filterStatus === 'Pending'
+                    ? 'bg-warning text-white'
+                    : 'bg-secondary text-secondary border border-secondary hover:bg-tertiary'
+                }`}
+              >
+                {t('admin.filters.pending') || 'En attente'} ({myStats.pending})
+              </button>
+              <button
+                onClick={() => setFilterStatus('Active')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  filterStatus === 'Active'
+                    ? 'bg-success text-white'
+                    : 'bg-secondary text-secondary border border-secondary hover:bg-tertiary'
+                }`}
+              >
+                {t('admin.filters.active') || 'Actives'} ({myStats.active})
+              </button>
+              <button
+                onClick={() => setFilterStatus('Closed')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  filterStatus === 'Closed'
+                    ? 'bg-tertiary text-white'
+                    : 'bg-secondary text-secondary border border-secondary hover:bg-tertiary'
+                }`}
+              >
+                {t('admin.filters.closed') || 'Fermées'} ({myStats.closed})
+              </button>
+              <button
+                onClick={() => setFilterStatus('Finalized')}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  filterStatus === 'Finalized'
+                    ? 'bg-accent text-white'
+                    : 'bg-secondary text-secondary border border-secondary hover:bg-tertiary'
+                }`}
+              >
+                {t('admin.filters.finalized') || 'Finalisées'} ({myStats.finalized})
+              </button>
+            </div>
+          </div>
+
+          {/* Liste des élections filtrées */}
+          {filteredMyElections.length === 0 ? (
+            <div className="bg-secondary border-2 border-secondary rounded-xl p-8 text-center">
+              <p className="text-secondary">
+                {t('admin.myElectionsList.noResults') || 'Aucune élection trouvée avec ce filtre'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {filteredMyElections.map((election) => {
+                const badge = getStatusBadge(election.status);
+                const now = Date.now() / 1000;
+                const hasRegistration = election.requires_registration;
+
+                return (
+                  <div
+                    key={election.id}
+                    className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-5 hover:shadow-lg transition-all cursor-pointer hover:-translate-y-1"
+                    onClick={() => navigate(`/election/${election.id}`)}
+                  >
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-bold text-primary flex-1 pr-2">
+                        {election.title}
+                      </h3>
+                      <span className={`${badge.bgClass} ${badge.textClass} px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wide whitespace-nowrap`}>
+                        {badge.text}
+                      </span>
+                    </div>
+
+                    {/* Dates */}
+                    <div className="space-y-1 mb-3 text-sm">
+                      <div className="flex items-center gap-2 text-secondary">
+                        <span className="font-semibold">Début:</span>
+                        <span>{formatDateTime(election.start_time)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-secondary">
+                        <span className="font-semibold">Fin:</span>
+                        <span>{formatDateTime(election.end_time)}</span>
+                      </div>
+                      {hasRegistration && election.registration_deadline && (
+                        <div className="flex items-center gap-2 text-accent">
+                          <span className="font-semibold">⏰ Deadline inscription:</span>
+                          <span>{formatDateTime(election.registration_deadline)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Statistiques */}
+                    <div className="grid grid-cols-2 gap-2 pt-3 border-t border-tertiary">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">👥</span>
+                        <div>
+                          <div className="text-lg font-bold text-primary">{election.num_candidates}</div>
+                          <div className="text-xs text-secondary">Candidats</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🗳️</span>
+                        <div>
+                          <div className="text-lg font-bold text-primary">{election.total_votes}</div>
+                          <div className="text-xs text-secondary">Votes</div>
+                        </div>
+                      </div>
+                      {hasRegistration && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">✅</span>
+                            <div>
+                              <div className="text-lg font-bold text-success">{election.registered_voters_count}</div>
+                              <div className="text-xs text-secondary">Inscrits</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-2xl">📊</span>
+                            <div>
+                              <div className="text-lg font-bold text-accent">
+                                {election.registered_voters_count > 0
+                                  ? Math.round((election.total_votes / election.registered_voters_count) * 100)
+                                  : 0}%
+                              </div>
+                              <div className="text-xs text-secondary">Participation</div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

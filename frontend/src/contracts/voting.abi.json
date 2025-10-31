@@ -1,11 +1,11 @@
 {
     "buildInfo": {
         "rustc": {
-            "version": "1.92.0-nightly",
-            "commitHash": "2aaa62b89d22b570e560731b03e3d2d6f5c3bbce",
-            "commitDate": "2025-10-24",
+            "version": "1.93.0-nightly",
+            "commitHash": "d5419f1e97b90741d51841f800d3c697c662567d",
+            "commitDate": "2025-10-30",
             "channel": "Nightly",
-            "short": "rustc 1.92.0-nightly (2aaa62b89 2025-10-24)"
+            "short": "rustc 1.93.0-nightly (d5419f1e9 2025-10-30)"
         },
         "contractCrate": {
             "name": "voting",
@@ -112,20 +112,7 @@
                 "Inscription d'un électeur à une élection",
                 "",
                 "# Arguments",
-                "* `election_id` - ID de l'élection"
-            ],
-            "name": "registerToVote",
-            "mutability": "mutable",
-            "inputs": [
-                {
-                    "name": "election_id",
-                    "type": "u64"
-                }
-            ],
-            "outputs": []
-        },
-        {
-            "docs": [
+                "* `election_id` - ID de l'élection",
                 "Ajoute des adresses à la liste blanche d'une élection",
                 "",
                 "# Arguments",
@@ -244,6 +231,43 @@
         },
         {
             "docs": [
+                "Soumet un vote privé avec preuve zk-SNARK vérifiée off-chain",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `vote_commitment` - Commitment Poseidon du vote",
+                "* `nullifier` - Nullifier unique pour empêcher le double vote",
+                "* `backend_signature` - Signature du backend après vérification de la preuve",
+                "",
+                "# Sécurité",
+                "- La preuve zk-SNARK est vérifiée off-chain par le backend",
+                "- Le backend signe les données pour autoriser la transaction",
+                "- Le nullifier empêche tout double vote"
+            ],
+            "name": "submitPrivateVote",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "vote_commitment",
+                    "type": "bytes"
+                },
+                {
+                    "name": "nullifier",
+                    "type": "bytes"
+                },
+                {
+                    "name": "backend_signature",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
                 "Active une élection (changement de statut Pending -> Active)"
             ],
             "name": "activateElection",
@@ -284,6 +308,35 @@
                 }
             ],
             "outputs": []
+        },
+        {
+            "docs": [
+                "Configure l'adresse du backend autorisé à vérifier les preuves zk-SNARK",
+                "(admin seulement)"
+            ],
+            "name": "setBackendVerifier",
+            "onlyOwner": true,
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "address",
+                    "type": "Address"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Obtenir l'adresse du backend vérificateur zk-SNARK"
+            ],
+            "name": "getBackendVerifier",
+            "mutability": "readonly",
+            "inputs": [],
+            "outputs": [
+                {
+                    "type": "Address"
+                }
+            ]
         },
         {
             "name": "getElection",
@@ -527,6 +580,20 @@
                 {
                     "name": "timestamp",
                     "type": "u64"
+                }
+            ]
+        },
+        {
+            "identifier": "privateVoteSubmitted",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "vote_commitment",
+                    "type": "bytes"
                 }
             ]
         },

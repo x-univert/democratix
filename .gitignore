@@ -68,3 +68,9 @@ docs-dev/
 # Cypress
 cypress/videos/
 cypress/screenshots/
+
+# Wallets & Private Keys (IMPORTANT: Never commit!)
+multiversx-wallets/
+
+# Claude AI Configuration (local only)
+.claude/

@@ -11,7 +11,30 @@ export const App = () => {
   return (
     <Router>
       <ScrollToTop />
-      <Toaster />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          ariaProps: {
+            role: 'status',
+            'aria-live': 'polite' as 'polite',
+          },
+          className: '',
+          style: {},
+          success: {
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <AxiosInterceptors>
         <BatchTransactionsContextProvider>
           <Layout>

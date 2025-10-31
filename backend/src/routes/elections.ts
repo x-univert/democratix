@@ -1,7 +1,6 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { electionController } from '../controllers/electionController';
-import { validate, validateParams, CreateElectionSchema, IdParamSchema } from '../validators/schemas';
+import { validate, validateParams, CreateElectionWithSenderSchema, IdParamSchema } from '../validators/schemas';
 
 const router = Router();
 
@@ -11,9 +10,7 @@ const router = Router();
  */
 router.post(
   '/prepare',
-  validate(CreateElectionSchema.extend({
-    senderAddress: z.string().min(62).max(62), // erd1... address
-  })),
+  validate(CreateElectionWithSenderSchema),
   electionController.prepareCreateElection
 );
 

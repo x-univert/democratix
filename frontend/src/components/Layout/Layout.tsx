@@ -1,6 +1,6 @@
 import { PropsWithChildren } from 'react';
 
-import { Footer, Header } from 'components';
+import { Footer, Header, SkipLink } from 'components';
 import { AuthRedirectWrapper } from 'wrappers';
 
 // prettier-ignore
@@ -11,9 +11,10 @@ const styles = {
 
 export const Layout = ({ children }: PropsWithChildren) => (
   <div className={styles.layoutContainer}>
+    <SkipLink />
     <Header />
 
-    <main className={styles.mainContainer}>
+    <main id="main-content" className={styles.mainContainer}>
       <AuthRedirectWrapper>{children}</AuthRedirectWrapper>
     </main>
 

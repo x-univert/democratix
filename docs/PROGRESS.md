@@ -1,8 +1,8 @@
 # 📊 DEMOCRATIX - Suivi de Progression
 
-**Dernière mise à jour**: 28 Octobre 2025
-**Version actuelle**: v0.6.0
-**Phase**: MVP Phase 1 (98% complété) 🎉
+**Dernière mise à jour**: 31 Octobre 2025
+**Version actuelle**: v1.0.0 🎉
+**Phase**: MVP Phase 1 + Vote Privé zk-SNARK COMPLET! 🔐🚀
 
 ---
 
@@ -26,6 +26,16 @@
 - [x] Dashboard admin avec statistiques
 - [x] Page profil avec historique
 - [x] **UI/UX polish** ✅ **TERMINÉ 28 OCT** (loading, errors, animations)
+- [x] **Progress Tracker** ✅ **AJOUTÉ 28 OCT SOIR** - Suivi visuel création élection
+- [x] **Ajout automatique candidats** ✅ **TERMINÉ 28 OCT** - Lors création élection
+- [x] **🔐 VOTE PRIVÉ zk-SNARK** ✅ **COMPLET 31 OCT** - Anonymat cryptographique!
+  - [x] Backend Node.js avec API zk-SNARK
+  - [x] Circuits Circom compilés (valid_vote + voter_eligibility)
+  - [x] Preuves Groth16 RÉELLES avec snarkjs
+  - [x] Poseidon hash (circomlibjs)
+  - [x] Smart contract submitPrivateVote
+  - [x] Configuration backend verifier
+  - [x] Test E2E complet réussi
 
 ### 🚧 En Cours / À Faire
 
@@ -69,10 +79,12 @@
 - [ ] Backend Node.js (optionnel)
 - [ ] Monitoring & Analytics
 
-#### 🔵 Priorité 4 - Phase 3 (3-6 mois)
-- [ ] zk-SNARKs (anonymat renforcé)
-- [ ] Chiffrement homomorphique
-- [ ] NFC Verification
+#### 🔵 Priorité 4 - Phase 3 (FAIT + Améliorations futures)
+- [x] **zk-SNARKs** ✅ **COMPLET 31 OCT** (anonymat renforcé)
+- [ ] Interface visualisation résultats anonymes
+- [ ] Documentation développeur système zk-SNARK
+- [ ] Chiffrement homomorphique (amélioration future)
+- [ ] NFC Verification (amélioration future)
 
 ---
 
@@ -85,7 +97,7 @@
 | **Home** | ✅ 100% | Hero, connexion wallet | ✅ FR/EN/ES | ✅ N/A | ⏳ Manuel |
 | **Elections** | ✅ 95% | Liste, filtres, pagination, skeletons | ✅ FR/EN/ES | ✅ Skeleton | ⏳ Manuel |
 | **ElectionDetail** | ✅ 98% | Détails, actions, candidats, skeleton, error | ✅ FR/EN/ES | ✅ Skeleton+Error | ⏳ Manuel |
-| **CreateElection** | ✅ 90% | Formulaire, upload IPFS | ✅ FR/EN/ES | ⏳ Basique | ⏳ Manuel |
+| **CreateElection** | ✅ 100% | Formulaire, upload IPFS, ajout auto candidats | ✅ FR/EN/ES | ✅ Complet | ✅ Manuel |
 | **AddCandidate** | ✅ 90% | Formulaire, upload photo | ✅ FR/EN/ES | ⏳ Basique | ⏳ Manuel |
 | **Vote** | ✅ 100% | Sélection candidat, vote | ✅ FR/EN/ES | ✅ Complet | ✅ Manuel |
 | **Results** | ✅ 95% | Graphiques, stats, colors fix | ✅ FR/EN/ES | ✅ Complet | ✅ Manuel |
@@ -106,11 +118,13 @@
 | Service/Hook | État | Fonction | Tests |
 |--------------|------|----------|-------|
 | **ipfsService** | ✅ 100% | Upload/fetch IPFS (Pinata) | ✅ **TESTÉ 26 OCT** |
+| **zkProofService** | ✅ 100% | Preuves zk-SNARK Groth16 | ✅ **TESTÉ 31 OCT** |
 | **useGetElections** | ✅ 100% | Récupère élections | ⏳ Manuel |
 | **useGetElectionDetail** | ✅ 100% | Détails élection | ⏳ Manuel |
 | **useCreateElection** | ✅ 100% | Créer élection | ⏳ Manuel |
 | **useAddCandidate** | ✅ 100% | Ajouter candidat | ⏳ Manuel |
 | **useVote** | ✅ 100% | Voter | ⏳ Manuel |
+| **useSubmitPrivateVote** | ✅ 100% | Vote privé zk-SNARK | ✅ **TESTÉ 31 OCT** |
 | **useActivateElection** | ✅ 100% | Activer élection | ⏳ Manuel |
 | **useCloseElection** | ✅ 100% | Clôturer élection | ⏳ Manuel |
 | **useFinalizeElection** | ✅ 100% | Finaliser élection | ⏳ Manuel |
@@ -168,10 +182,10 @@
 - [ ] Refresh automatique après transaction
 
 ### Limitations Actuelles
-- ⚠️ Pas de vrai chiffrement (crypto_mock.rs)
-- ⚠️ Pas d'anonymat garanti
-- ⚠️ Pas de vérification d'identité (NFC)
-- ⚠️ Pas de backend (tout côté client)
+- ✅ ~~Pas de vrai chiffrement (crypto_mock.rs)~~ **RÉSOLU 31 OCT** - zk-SNARKs implémentés!
+- ✅ ~~Pas d'anonymat garanti~~ **RÉSOLU 31 OCT** - Vote privé avec nullifiers!
+- ⚠️ Pas de vérification d'identité (NFC) - Phase future
+- ✅ ~~Pas de backend (tout côté client)~~ **RÉSOLU 31 OCT** - Backend Node.js opérationnel!
 
 ---
 
@@ -181,12 +195,14 @@
 - **Coverage tests**: ~20% (smart contracts uniquement)
 - **TypeScript strict**: ✅ Activé
 - **ESLint**: ✅ Configuré
-- **Lignes de code**: ~15,000 lignes
+- **Lignes de code**: ~18,000 lignes (backend + circuits ajoutés)
 
 ### Performance
 - **Page load**: ~1-2s (local)
 - **Transaction time**: ~6s (Devnet)
 - **IPFS upload**: ~2-5s (image <5MB)
+- **zk-SNARK proof generation**: ~1-2s (browser)
+- **Backend verification**: ~100-200ms
 
 ### UX
 - **Langues supportées**: 3 (FR, EN, ES)
@@ -223,6 +239,37 @@
 ---
 
 ## 💡 Notes & Décisions
+
+### 31 Octobre 2025 - 🔐 IMPLÉMENTATION COMPLÈTE zk-SNARK
+- ✅ **Backend Node.js opérationnel**: Port 3001, API zk-SNARK complète
+  - Fix TypeScript compilation (typeRoots pour snarkjs)
+  - Routes: /api/zk/health, /api/zk/verify-vote, /api/zk/verify-eligibility
+  - Vérification cryptographique avec snarkjs.groth16.verify()
+  - Signature backend pour autoriser les votes
+- ✅ **Circuits Circom compilés**: valid_vote.circom + voter_eligibility_simple.circom
+  - WASM (witness calculator): 1.8 MB + 1.7 MB
+  - zkey (proving keys): 420 KB + 721 KB
+  - Total: 4.6 MB de fichiers circuit
+- ✅ **Frontend - Preuves RÉELLES Groth16**: Remplacement complet des mocks
+  - Installation circomlibjs + snarkjs côté client
+  - Poseidon hash pour voteCommitment et nullifier
+  - groth16.fullProve() génère preuves en ~1-2 secondes
+  - Fix conversion hex → decimal pour snarkjs
+- ✅ **Smart Contract upgradé**: submitPrivateVote opérationnel
+  - Structure PrivateVote avec commitment, nullifier, signature
+  - Configuration backend verifier: erd1krs93kdvj7yr9wkvsv5f4vzkku4m3g3k40u2m50k6k8s6lyyd3qqnvl394
+  - Vérification anti-double vote avec nullifier
+  - Event privateVoteSubmitted émis
+- ✅ **Test E2E complet réussi**:
+  - Vote commitment: `16819160767116598339437546008197548054806700693173916401560269033225931530865`
+  - Transaction hash: `65bbc9a5429f6c3f464ebbe8e8ae8e4c23f7e3bdfd19ce8b9b4f1f5b2b10f0ec`
+  - Status: success ✅
+- 📝 **Architecture hybride**:
+  - Frontend: Génération preuves zk-SNARK (browser)
+  - Backend: Vérification cryptographique + signature
+  - Smart contract: Stockage on-chain + anti-double vote
+- 🎯 **État**: Système de vote privé 100% fonctionnel avec anonymat cryptographique!
+- 🎯 **Next**: Interface visualisation résultats + Documentation développeur
 
 ### 28 Octobre 2025 (Session 2 - Après-midi)
 - ✅ **Finalisation workflow**: Smart contract + Frontend complet

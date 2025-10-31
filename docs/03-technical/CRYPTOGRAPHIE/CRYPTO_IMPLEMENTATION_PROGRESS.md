@@ -190,15 +190,36 @@ backend/src/index.ts                         (+1 route import)
 
 ---
 
+## ✅ Phase 2 Complétée (31 Oct 2025)
+
+### Circuits zk-SNARK
+1. ✅ Circuits Circom écrits :
+   - `backend/circuits/voter_eligibility.circom` (91 lignes)
+   - `backend/circuits/valid_vote.circom` (74 lignes)
+   - `backend/circuits/README.md` (documentation complète)
+
+2. ✅ Scripts d'automatisation créés :
+   - `compile-all.sh` - Compile les circuits en R1CS/WASM
+   - `setup-all.sh` - Génère les proving/verification keys
+   - `download-ptau.sh` - Télécharge Powers of Tau
+   - `test-circuits.sh` - Teste les circuits
+
+3. ✅ Améliorations cryptoService.ts :
+   - Merkle proof generation fixée (circomlibjs SMT API)
+   - Merkle proof verification implémentée
+
+4. ✅ Corrections backend :
+   - Zod schema issues fixés (elections.ts)
+   - MultiversX SDK: Struct API mise à jour
+   - MultiversX SDK: ChainID types fixés
+   - MultiversX SDK: TransactionWatcher API fixée
+
 ## 🎯 Prochaines Étapes
 
-### Phase 2 : Circuits zk-SNARK (Semaine prochaine)
-1. Écrire circuits Circom :
-   - `voter_eligibility.circom`
-   - `valid_vote.circom`
-2. Compiler et générer proving/verification keys
-3. Tests avec snarkjs
-4. Intégration frontend (proof generation)
+### Phase 3 : Smart Contracts (2-3 semaines)
+1. Compiler circuits Circom avec ./compile-all.sh
+2. Générer clés avec ./setup-all.sh
+3. Implémenter vérificateur Groth16 en Rust
 
 ### Phase 3 : Smart Contracts (3 semaines)
 1. Implémenter vérificateur Groth16 en Rust

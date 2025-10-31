@@ -158,6 +158,7 @@ cargo test
 ### Frontend E2E (Cypress)
 
 **Tests complets implémentés** ✅ :
+
 - ✅ **01-home-navigation.cy.ts** - Navigation et page d'accueil (17 tests)
 - ✅ **02-elections-list.cy.ts** - Liste et filtrage des élections (27 tests)
 - ✅ **03-election-detail.cy.ts** - Détails d'élection et candidats (28 tests)
@@ -184,6 +185,7 @@ npx cypress run --browser edge
 ```
 
 **Tests automatiques via GitHub Actions** :
+
 - Les tests s'exécutent automatiquement sur chaque push/PR
 - Résultats visibles dans l'onglet "Actions" de GitHub
 - Screenshots et vidéos sauvegardés en cas d'échec
@@ -212,11 +214,11 @@ npm test
 
 ### Smart Contracts (Rust)
 
-| Contrat | Description | Statut |
-|---------|-------------|--------|
-| **voting** | Création d'élections, votes chiffrés, cycle de vie | ✅ POC |
-| **voter-registry** | Enregistrement électeurs avec zk-SNARKs | ✅ POC |
-| **results** | Dépouillement avec déchiffrement homomorphique | 🚧 Structure |
+| Contrat                  | Description                                           | Statut       |
+| ------------------------ | ----------------------------------------------------- | ------------ |
+| **voting**         | Création d'élections, votes chiffrés, cycle de vie | ✅ POC       |
+| **voter-registry** | Enregistrement électeurs avec zk-SNARKs              | ✅ POC       |
+| **results**        | Dépouillement avec déchiffrement homomorphique      | 🚧 Structure |
 
 ### Backend API (Node.js/TypeScript)
 
@@ -259,10 +261,10 @@ npm test
 
 ### Q1 2025 ✅ (En cours)
 
-- [x] Documentation complète
-- [x] Smart contracts POC
-- [x] Backend API
-- [x] Tests end-to-end (260+ tests Cypress E2E)
+- [X] Documentation complète
+- [X] Smart contracts POC
+- [X] Backend API
+- [X] Tests end-to-end (260+ tests Cypress E2E)
 - [ ] Audit sécurité initial
 
 ### Q2 2025
@@ -316,9 +318,9 @@ Nous accueillons les contributions ! Consultez notre [guide de contribution](./C
 
 ## 📞 Contact & Communauté
 
-- **Email** : contact@democratix.vote
+- **Email** : x_democratix@protonmail.com
 - **GitHub** : https://github.com/x-univert/DEMOCRATIX
-- **Discord** : [À créer]
+- **Discord** : https://x.com/X_Democratix
 - **Twitter** : [À créer]
 
 ---

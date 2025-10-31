@@ -62,11 +62,20 @@
     "noElectionsEmpty": "Create the first election to get started",
     "searchPlaceholder": "Search for an election...",
     "filters": {
-      "all": "All",
+      "all": "All statuses",
       "pending": "Pending",
       "active": "Active",
       "closed": "Closed",
       "finalized": "Finalized"
+    },
+    "categoryFilters": {
+      "all": "All categories",
+      "presidential": "Presidential",
+      "legislative": "Legislative",
+      "local": "Local",
+      "referendum": "Referendum",
+      "association": "Association",
+      "other": "Other"
     },
     "stats": {
       "total": "Total",
@@ -95,6 +104,13 @@
     "candidates_plural": "Candidates",
     "votes": "Vote",
     "votes_plural": "Votes",
+    "registered": "Registered",
+    "registrationRequired": "Registration required",
+    "registrationHint": "Invitation code required",
+    "registerButton": "Register",
+    "registerWithCode": "Register with a code",
+    "checking": "Checking...",
+    "notRegistered": "Not registered",
     "participation": "Participation",
     "timeRemaining": "Time remaining",
     "day": "day",
@@ -104,7 +120,11 @@
     "actions": {
       "addCandidates": "+ Add candidates",
       "activateElection": "Activate election",
+      "activating": "Activating...",
       "activateMinCandidates": "({{count}}/2)",
+      "needMinCandidates": "You need at least 2 candidates to activate the election",
+      "activationSuccess": "Election activated successfully!",
+      "activationError": "Error activating the election",
       "viewDetails": "View details",
       "closeOnBlockchain": "Close on blockchain",
       "expiredWarning": "⚠️ Expired election",
@@ -150,6 +170,59 @@
     "expiredWarning": "The voting period has ended. Close the election on the blockchain.",
     "voteNow": "Vote now",
     "viewResults": "View detailed results",
+    "registrationRequired": "Registration required for this election",
+    "registrationRequiredHint": "You must register before you can vote in this election.",
+    "registerButton": "Register for this election",
+    "registered": "You are registered for this election",
+    "checking": "Checking...",
+    "registrationDeadline": "Registration deadline",
+    "registrationOpen": "Registrations open",
+    "registrationClosed": "Registrations closed",
+    "or": "or",
+    "kycRequired": "Registration with identity verification",
+    "kycHint": "To participate in this election, you must complete an off-chain identity verification (KYC) process. The organizer will then provide you with a unique invitation code.",
+    "kycSteps": "Steps: 1) Create your MultiversX address 2) Complete KYC 3) Receive your invitation code 4) Register below",
+    "whitelist": {
+      "title": "Address Whitelist",
+      "description": "Add addresses to the whitelist to pre-register them automatically.",
+      "addressesLabel": "Verified addresses (one per line or comma-separated)",
+      "addButton": "✅ Automatically register these addresses",
+      "hint": "Import a CSV with verified addresses by copy-pasting the content here.",
+      "kycTitle": "Automatic registration after KYC",
+      "kycDescription": "Addresses added to the whitelist are automatically registered. Use this method after verifying your voters' identity via your off-chain KYC process.",
+      "kycSteps": "Process: 1) Voter completes KYC 2) Voter provides their MultiversX address 3) You add the address here 4) Automatic registration confirmed",
+      "noAddresses": "No valid address found",
+      "success": "Addresses added successfully",
+      "error": "Error adding to whitelist"
+    },
+    "invitationCodes": {
+      "title": "Invitation Codes",
+      "description": "Generate unique invitation codes that voters can use to register.",
+      "countLabel": "Number of codes to generate",
+      "generateButton": "Generate codes",
+      "hint": "Generated codes will be displayed automatically here and in a modal.",
+      "securityHint": "Security: Distribute each code securely to a single verified voter. Once used, the code cannot be reused.",
+      "kycTitle": "Alternative: Invitation codes after KYC",
+      "kycDescription": "Generate unique single-use codes that you will distribute to voters after their KYC verification. Each code allows one registration.",
+      "kycFlow": "Flow: 1) Voter completes KYC 2) You generate and send a code 3) Voter registers with the code 4) Code marked as used",
+      "invalidCount": "Invalid number (1-1000)",
+      "success": "Codes generated successfully",
+      "error": "Error generating codes",
+      "registerWithCode": "Enter your invitation code",
+      "codePlaceholder": "Paste your code here...",
+      "registerButton": "Register",
+      "codeInfo": "The invitation code is a unique single-use identifier provided by the organizer.",
+      "registerSuccess": "Successfully registered with invitation code",
+      "registerError": "Error registering with code"
+    },
+    "export": {
+      "title": "List Export",
+      "description": "Export the complete list of registered voters for audit or transparency.",
+      "totalRegistered": "Registered",
+      "csvButton": "Export CSV",
+      "jsonButton": "Export JSON",
+      "error": "Export error"
+    },
     "confirmClose": "Are you sure you want to close this election? This action is irreversible and no new votes can be recorded.",
     "confirmModal": {
       "close": {
@@ -186,7 +259,8 @@
       "notFoundDescription": "The election you are looking for does not exist or has been deleted.",
       "loadError": "Error loading election",
       "closeError": "Error closing election. Verify that you are the organizer.",
-      "finalizeError": "Error finalizing election. Verify that you are the organizer and that the election is closed."
+      "finalizeError": "Error finalizing election. Verify that you are the organizer and that the election is closed.",
+      "mustRegister": "You must register before you can vote in this election."
     }
   },
   "vote": {
@@ -203,6 +277,10 @@
     "alreadyVotedTitle": "You have already voted",
     "alreadyVotedMessage": "You have already participated in this election. Your vote has been successfully recorded on the blockchain.",
     "voteRecorded": "Your vote has been recorded",
+    "notRegistered": "Not registered",
+    "notRegisteredTitle": "Registration required",
+    "notRegisteredMessage": "You must register before you can vote in this election.",
+    "goToRegistration": "Register now",
     "noCandidates": "No candidates available for this election.",
     "electionNotActive": "This election is not active",
     "voteSuccess": "Vote recorded successfully!",
@@ -232,6 +310,11 @@
       "startDateHint": "The election will start at this date and time",
       "endDate": "End date and time",
       "endDateHint": "The election will end at this date and time",
+      "requiresRegistration": "Registration required to vote",
+      "requiresRegistrationHint": "Voters must register before they can vote. This allows calculating the real participation rate.",
+      "registrationDeadline": "Registration deadline",
+      "registrationDeadlineHint": "The registration deadline must be BEFORE the vote start date",
+      "optional": "optional",
       "image": "Image (optional)",
       "imageHint": "Accepted formats: JPG, PNG, GIF (max 5MB)",
       "category": "Category (optional)",
@@ -379,6 +462,17 @@
       "active": "Active",
       "votesReceived": "Votes received",
       "candidates": "Candidates"
+    },
+    "myElectionsList": {
+      "title": "My Organized Elections",
+      "noResults": "No election found with this filter"
+    },
+    "filters": {
+      "all": "All",
+      "pending": "Pending",
+      "active": "Active",
+      "closed": "Closed",
+      "finalized": "Finalized"
     },
     "charts": {
       "statusDistribution": "Status distribution",
@@ -596,5 +690,8 @@
       "viewElections": "View Elections",
       "createElection": "Create Election"
     }
+  },
+  "accessibility": {
+    "skipToMainContent": "Skip to main content"
   }
 }

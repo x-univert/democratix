@@ -14,12 +14,13 @@
     "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
-    "@multiversx/sdk-core": "^13.0.0",
+    "@multiversx/sdk-core": "^15.3.0",
     "@multiversx/sdk-network-providers": "^2.9.3",
     "@noble/curves": "^1.4.0",
     "@noble/hashes": "^1.4.0",
     "axios": "^1.6.2",
     "bcrypt": "^5.1.1",
+    "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",

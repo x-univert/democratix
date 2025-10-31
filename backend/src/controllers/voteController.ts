@@ -42,7 +42,7 @@ export class VoteController {
         success: true,
         message: 'Vote transaction prepared',
         data: {
-          transaction: transaction.toPlainObject(),
+          transaction: transaction,
         },
       });
     } catch (error: any) {

@@ -12,7 +12,6 @@ import { Logo } from 'components';
 import {
   ACCOUNTS_ENDPOINT,
   getAccountProvider,
-  MvxDataWithExplorerLink,
   useGetAccount,
   useGetIsLoggedIn,
   useGetNetworkConfig
@@ -83,13 +82,18 @@ export const LeftPanel = ({
               className={styles.leftPanelMobileAddressIcon}
             />
 
-            <div className={styles.leftPanelMobileAddressWithExplorerLink}>
-              <MvxDataWithExplorerLink
-                data={address}
-                withTooltip={true}
-                explorerLink={`${explorerAddress}/${ACCOUNTS_ENDPOINT}/${address}`}
-              />
-            </div>
+            <a
+              href={`${explorerAddress}/${ACCOUNTS_ENDPOINT}/${address}`}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.leftPanelMobileAddressWithExplorerLink}
+              aria-label={`View account on explorer: ${address}`}
+              title={address}
+            >
+              <span className="font-mono text-sm">
+                {address.slice(0, 10)}...{address.slice(-6)}
+              </span>
+            </a>
           </div>
 
           {isLoggedIn && (

@@ -87,15 +87,26 @@ export const useGetElections = () => {
           )
             .then(response => response.json())
             .then(electionData => {
+              // Vérifier si la réponse contient des données
               if (electionData.data?.data?.returnData && electionData.data.data.returnData.length > 0) {
                 const electionBase64 = electionData.data.data.returnData[0];
+
+                // Si base64 est vide, l'élection n'existe pas
+                if (!electionBase64 || electionBase64.trim() === '') {
+                  console.warn(`⚠️ Election ${i} exists in counter but has no data (deleted or never created)`);
+                  return null;
+                }
+
                 const electionHex = base64ToHex(electionBase64);
-                return decodeElection(electionHex, i);
+                const decoded = decodeElection(electionHex, i);
+                console.log(`✅ Election ${i} decoded successfully`);
+                return decoded;
               }
+              console.warn(`⚠️ Election ${i} has no returnData (doesn't exist)`);
               return null;
             })
             .catch(err => {
-              console.error(`Error fetching election ${i}:`, err);
+              console.error(`❌ Error fetching election ${i}:`, err);
               return null;
             });
 
@@ -129,7 +140,9 @@ export const useGetElections = () => {
 // Fonction helper pour décoder une élection depuis hex
 function decodeElection(hex: string, defaultId: number): Election {
   try {
+    console.log(`🔍 Decoding election ${defaultId}, hex length: ${hex.length}, bytes: ${hex.length / 2}`);
     const bytes = hexToBytes(hex);
+    console.log(`🔍 Total bytes to decode: ${bytes.length}`);
     let offset = 0;
 
     // ID (u64 - 8 bytes)
@@ -173,6 +186,43 @@ function decodeElection(hex: string, defaultId: number): Election {
 
     // Total votes (u64)
     const total_votes = bytesToNumber(bytes.slice(offset, offset + 8));
+    offset += 8;
+
+    // Nouveaux champs (pour compatibilité avec les anciennes élections)
+    let requires_registration = false;
+    let registered_voters_count = 0;
+    let registration_deadline: number | null = null;
+
+    console.log(`🔍 Election ${defaultId}: offset=${offset}, bytes.length=${bytes.length}, remaining=${bytes.length - offset}`);
+
+    // Vérifier s'il reste des bytes à lire (nouvelle structure)
+    if (offset < bytes.length) {
+      console.log(`✅ Election ${defaultId}: Reading new fields (requires_registration, registered_voters_count, registration_deadline)`);
+      // Requires registration (bool - 1 byte)
+      requires_registration = bytes[offset] === 1;
+      offset += 1;
+
+      // Registered voters count (u64)
+      if (offset + 8 <= bytes.length) {
+        registered_voters_count = bytesToNumber(bytes.slice(offset, offset + 8));
+        offset += 8;
+      }
+
+      // Registration deadline (Option<u64> - 1 byte tag + optional 8 bytes)
+      if (offset < bytes.length) {
+        const hasDeadline = bytes[offset] === 1;
+        offset += 1;
+
+        if (hasDeadline && offset + 8 <= bytes.length) {
+          registration_deadline = bytesToNumber(bytes.slice(offset, offset + 8));
+          offset += 8;
+        }
+      }
+
+      console.log(`✅ Election ${defaultId}: requires_registration=${requires_registration}, registered_voters_count=${registered_voters_count}, registration_deadline=${registration_deadline}`);
+    } else {
+      console.log(`⚠️ Election ${defaultId}: Old format detected (no new fields)`);
+    }
 
     return {
       id: id || defaultId,
@@ -183,10 +233,14 @@ function decodeElection(hex: string, defaultId: number): Election {
       end_time,
       num_candidates,
       status,
-      total_votes
+      total_votes,
+      requires_registration,
+      registered_voters_count,
+      registration_deadline
     };
   } catch (err) {
-    console.error('Error decoding election:', err);
+    console.error(`❌ Error decoding election ${defaultId}:`, err);
+    console.error('Stack trace:', err instanceof Error ? err.stack : err);
     return {
       id: defaultId,
       title: 'Error loading',
@@ -196,7 +250,10 @@ function decodeElection(hex: string, defaultId: number): Election {
       end_time: 0,
       num_candidates: 0,
       status: 'Pending',
-      total_votes: 0
+      total_votes: 0,
+      requires_registration: false,
+      registered_voters_count: 0,
+      registration_deadline: null
     };
   }
 }

@@ -1,6 +1,6 @@
 import { votingContract } from 'config';
 import votingAbi from 'contracts/voting.abi.json';
-import { signAndSendTransactions } from 'helpers';
+import { signAndSendTransactionsWithHash } from 'helpers';
 import {
   AbiRegistry,
   Address,
@@ -24,7 +24,9 @@ export const useCreateElection = () => {
     title: string,
     description_ipfs: string,
     start_time: number,
-    end_time: number
+    end_time: number,
+    requires_registration: boolean = false,
+    registration_deadline: number | null = null
   ) => {
     try {
       // 1. Créer la factory avec l'ABI
@@ -36,29 +38,44 @@ export const useCreateElection = () => {
         abi
       });
 
-      // 2. Créer la transaction
+      // 2. Créer la transaction avec arguments (inclut OptionalValue)
+      const args = [
+        title,                  // bytes
+        description_ipfs,       // bytes
+        start_time,             // u64
+        end_time,               // u64
+        requires_registration   // bool
+      ];
+
+      // Ajouter registration_deadline si présent (OptionalValue<u64>)
+      if (registration_deadline !== null) {
+        args.push(registration_deadline);
+      }
+
       const transaction = await scFactory.createTransactionForExecute(
         new Address(address),
         {
           gasLimit: BigInt(15000000), // Plus de gas car fonction complexe
           function: 'createElection',
           contract: new Address(votingContract),
-          arguments: [
-            title,              // bytes
-            description_ipfs,   // bytes
-            start_time,         // u64
-            end_time            // u64
-          ]
+          arguments: args
         }
       );
 
       // 3. Signer et envoyer
-      const sessionId = await signAndSendTransactions({
+      const result = await signAndSendTransactionsWithHash({
         transactions: [transaction],
         transactionsDisplayInfo: CREATE_ELECTION_INFO
       });
 
-      return sessionId;
+      console.log('Transaction result:', result);
+      console.log('Transaction hash:', result.transactionHashes[0]);
+
+      // Retourner le sessionId et le hash de la transaction
+      return {
+        sessionId: result.sessionId,
+        transactionHash: result.transactionHashes[0]
+      };
     } catch (err) {
       console.error('Error creating election:', err);
       throw err;

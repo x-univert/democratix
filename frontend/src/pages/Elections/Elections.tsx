@@ -5,8 +5,10 @@ import { RouteNamesEnum } from 'localConstants';
 import { useGetElections, type Election } from 'hooks/elections';
 import { ElectionCard } from '../../components/ElectionCard';
 import { SkeletonCard } from '../../components/Skeleton';
+import { ipfsService } from '../../services/ipfsService';
 
 type FilterStatus = 'all' | 'Pending' | 'Active' | 'Closed' | 'Finalized';
+type FilterCategory = 'all' | 'presidential' | 'legislative' | 'local' | 'referendum' | 'association' | 'other';
 
 export const Elections = () => {
   const navigate = useNavigate();
@@ -18,6 +20,8 @@ export const Elections = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
+  const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
+  const [electionsMetadata, setElectionsMetadata] = useState<Record<number, any>>({});
   const isFirstRenderRef = useRef(true);
 
   // Lire le numéro de page depuis l'URL
@@ -31,6 +35,27 @@ export const Elections = () => {
       try {
         const data = await getElections();
         setElections(data || []);
+
+        // Charger les métadonnées IPFS pour chaque élection
+        const metadataPromises = (data || []).map(async (election) => {
+          try {
+            if (!election.description_ipfs || !ipfsService.isValidIPFSHash(election.description_ipfs)) {
+              return { id: election.id, metadata: null };
+            }
+            const metadata = await ipfsService.fetchElectionMetadata(election.description_ipfs);
+            return { id: election.id, metadata };
+          } catch (err) {
+            console.error(`Erreur lors du chargement des métadonnées pour l'élection ${election.id}:`, err);
+            return { id: election.id, metadata: null };
+          }
+        });
+
+        const results = await Promise.all(metadataPromises);
+        const metadataMap: Record<number, any> = {};
+        results.forEach(({ id, metadata }) => {
+          metadataMap[id] = metadata;
+        });
+        setElectionsMetadata(metadataMap);
       } catch (error) {
         console.error('Erreur lors de la récupération des élections:', error);
         setElections([]);
@@ -50,6 +75,14 @@ export const Elections = () => {
       filtered = filtered.filter(e => e.status === filterStatus);
     }
 
+    if (filterCategory !== 'all') {
+      // Filtrer par catégorie IPFS
+      filtered = filtered.filter(e => {
+        const metadata = electionsMetadata[e.id];
+        return metadata?.metadata?.category === filterCategory;
+      });
+    }
+
     if (searchQuery) {
       filtered = filtered.filter(e =>
         e.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -57,7 +90,7 @@ export const Elections = () => {
     }
 
     return filtered;
-  }, [elections, filterStatus, searchQuery]);
+  }, [elections, filterStatus, filterCategory, searchQuery, electionsMetadata]);
 
   const totalPages = Math.ceil(filteredElections.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -93,7 +126,7 @@ export const Elections = () => {
       return;
     }
     setCurrentPage(1);
-  }, [filterStatus, searchQuery]);
+  }, [filterStatus, filterCategory, searchQuery]);
 
   const stats = useMemo(() => {
     return {
@@ -130,7 +163,8 @@ export const Elections = () => {
         {/* Filters Skeleton */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="h-12 flex-1 bg-secondary animate-pulse rounded-lg"></div>
-          <div className="h-12 w-full md:w-48 bg-secondary animate-pulse rounded-lg"></div>
+          <div className="h-12 w-full md:w-64 bg-secondary animate-pulse rounded-lg"></div>
+          <div className="h-12 w-full md:w-64 bg-secondary animate-pulse rounded-lg"></div>
         </div>
 
         {/* Cards Grid Skeleton */}
@@ -204,66 +238,47 @@ export const Elections = () => {
             <button
               onClick={() => setSearchQuery('')}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-secondary hover:text-primary text-2xl leading-none"
+              aria-label={t('elections.clearSearch') || 'Clear search'}
+              type="button"
             >
               ×
             </button>
           )}
         </div>
 
-        {/* Filtres de statut */}
-        <div className="flex flex-wrap gap-2">
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filterStatus === 'all'
-                ? 'bg-btn-primary text-btn-primary shadow-md'
-                : 'bg-secondary text-secondary border-2 border-secondary vibe-border hover:bg-tertiary'
-            }`}
-            onClick={() => setFilterStatus('all')}
+        {/* Filtre de catégorie - Menu déroulant */}
+        <div className="w-full md:w-64">
+          <select
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value as FilterCategory)}
+            className="w-full px-4 py-3 bg-secondary border-2 border-secondary vibe-border text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all font-medium cursor-pointer"
           >
-            {t('elections.filters.all')}
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filterStatus === 'Pending'
-                ? 'bg-btn-primary text-btn-primary shadow-md'
-                : 'bg-secondary text-secondary border-2 border-secondary vibe-border hover:bg-tertiary'
-            }`}
-            onClick={() => setFilterStatus('Pending')}
+            <option value="all">{t('elections.categoryFilters.all')}</option>
+            <option value="presidential">{t('elections.categoryFilters.presidential')}</option>
+            <option value="legislative">{t('elections.categoryFilters.legislative')}</option>
+            <option value="local">{t('elections.categoryFilters.local')}</option>
+            <option value="referendum">{t('elections.categoryFilters.referendum')}</option>
+            <option value="association">{t('elections.categoryFilters.association')}</option>
+            <option value="other">{t('elections.categoryFilters.other')}</option>
+          </select>
+        </div>
+
+        {/* Filtre de statut - Menu déroulant */}
+        <div className="w-full md:w-64">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+            className="w-full px-4 py-3 bg-secondary border-2 border-secondary vibe-border text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent transition-all font-medium cursor-pointer"
           >
-            {t('elections.filters.pending')}
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filterStatus === 'Active'
-                ? 'bg-btn-primary text-btn-primary shadow-md'
-                : 'bg-secondary text-secondary border-2 border-secondary vibe-border hover:bg-tertiary'
-            }`}
-            onClick={() => setFilterStatus('Active')}
-          >
-            {t('elections.filters.active')}
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filterStatus === 'Closed'
-                ? 'bg-btn-primary text-btn-primary shadow-md'
-                : 'bg-secondary text-secondary border-2 border-secondary vibe-border hover:bg-tertiary'
-            }`}
-            onClick={() => setFilterStatus('Closed')}
-          >
-            {t('elections.filters.closed')}
-          </button>
-          <button
-            className={`px-4 py-2 rounded-lg font-medium transition-all ${
-              filterStatus === 'Finalized'
-                ? 'bg-btn-primary text-btn-primary shadow-md'
-                : 'bg-secondary text-secondary border-2 border-secondary vibe-border hover:bg-tertiary'
-            }`}
-            onClick={() => setFilterStatus('Finalized')}
-          >
-            {t('elections.filters.finalized')}
-          </button>
+            <option value="all">{t('elections.filters.all')}</option>
+            <option value="Pending">{t('elections.filters.pending')}</option>
+            <option value="Active">{t('elections.filters.active')}</option>
+            <option value="Closed">{t('elections.filters.closed')}</option>
+            <option value="Finalized">{t('elections.filters.finalized')}</option>
+          </select>
         </div>
       </div>
+
 
       {/* Résultats */}
       {filteredElections.length === 0 ? (
@@ -271,7 +286,7 @@ export const Elections = () => {
           <svg className="w-24 h-24 text-secondary mb-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h3 className="text-2xl font-bold text-primary mb-2">{t('elections.noElections')}</h3>
+          <h2 className="text-2xl font-bold text-primary mb-2">{t('elections.noElections')}</h2>
           <p className="text-secondary mb-6 text-center max-w-md">
             {searchQuery || filterStatus !== 'all'
               ? t('elections.noElectionsSubtitle')
@@ -302,6 +317,8 @@ export const Elections = () => {
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
                 className="px-6 py-2 bg-secondary text-secondary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={t('elections.pagination.previous')}
+                type="button"
               >
                 ← {t('elections.pagination.previous')}
               </button>
@@ -316,6 +333,9 @@ export const Elections = () => {
                         ? 'bg-btn-primary text-btn-primary shadow-md'
                         : 'bg-secondary text-secondary border-2 border-secondary vibe-border hover:bg-tertiary'
                     }`}
+                    aria-label={`${t('elections.pagination.goToPage')} ${page}`}
+                    aria-current={currentPage === page ? 'page' : undefined}
+                    type="button"
                   >
                     {page}
                   </button>
@@ -326,6 +346,8 @@ export const Elections = () => {
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
                 className="px-6 py-2 bg-secondary text-secondary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={t('elections.pagination.next')}
+                type="button"
               >
                 {t('elections.pagination.next')} →
               </button>

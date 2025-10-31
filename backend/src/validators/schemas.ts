@@ -12,14 +12,32 @@ export const CandidateSchema = z.object({
 export type Candidate = z.infer<typeof CandidateSchema>;
 
 /**
- * Schéma de validation pour la création d'une élection
+ * Schéma de base pour la création d'une élection (sans refinements)
  */
-export const CreateElectionSchema = z.object({
+const CreateElectionBaseSchema = z.object({
   title: z.string().min(5).max(200),
   description: z.string().min(10).max(10000),
   startTime: z.number().int().positive(),
   endTime: z.number().int().positive(),
   candidates: z.array(CandidateSchema).min(2).max(50),
+});
+
+/**
+ * Schéma de validation pour la création d'une élection (avec refinements)
+ */
+export const CreateElectionSchema = CreateElectionBaseSchema.refine(data => data.endTime > data.startTime, {
+  message: "La date de fin doit être après la date de début",
+  path: ["endTime"],
+}).refine(data => data.startTime > Math.floor(Date.now() / 1000), {
+  message: "La date de début doit être dans le futur",
+  path: ["startTime"],
+});
+
+/**
+ * Schéma avec senderAddress pour les transactions
+ */
+export const CreateElectionWithSenderSchema = CreateElectionBaseSchema.extend({
+  senderAddress: z.string().min(62).max(62), // erd1... address
 }).refine(data => data.endTime > data.startTime, {
   message: "La date de fin doit être après la date de début",
   path: ["endTime"],
@@ -29,6 +47,7 @@ export const CreateElectionSchema = z.object({
 });
 
 export type CreateElectionInput = z.infer<typeof CreateElectionSchema>;
+export type CreateElectionWithSenderInput = z.infer<typeof CreateElectionWithSenderSchema>;
 
 /**
  * Schéma pour l'enregistrement d'un électeur

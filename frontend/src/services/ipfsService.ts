@@ -6,8 +6,17 @@ const PINATA_API_KEY = import.meta.env.VITE_PINATA_API_KEY;
 const PINATA_SECRET_API_KEY = import.meta.env.VITE_PINATA_SECRET_API_KEY;
 const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
 
-// Gateway IPFS pour récupérer les fichiers
-const IPFS_GATEWAY = import.meta.env.VITE_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/';
+// Gateways IPFS publiques avec support CORS (en ordre de préférence)
+const IPFS_GATEWAYS = [
+  'https://ipfs.io/ipfs/',
+  'https://dweb.link/ipfs/',
+  'https://cloudflare-ipfs.com/ipfs/',
+  import.meta.env.VITE_IPFS_GATEWAY || 'https://gateway.pinata.cloud/ipfs/'
+];
+
+// Cache simple en mémoire pour éviter trop de requêtes
+const ipfsCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Structure des métadonnées d'une élection sur IPFS
@@ -107,27 +116,58 @@ export class IPFSService {
   }
 
   /**
-   * Récupère un fichier JSON depuis IPFS
+   * Récupère un fichier JSON depuis IPFS avec fallback et cache
    */
   async fetchJSON<T = any>(ipfsHash: string): Promise<T> {
-    try {
-      // Nettoyer le hash IPFS (enlever les préfixes ipfs:// ou https://...)
-      const cleanHash = this.cleanIPFSHash(ipfsHash);
+    // Nettoyer le hash IPFS (enlever les préfixes ipfs:// ou https://...)
+    const cleanHash = this.cleanIPFSHash(ipfsHash);
 
-      const response = await axios.get(`${IPFS_GATEWAY}${cleanHash}`);
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération depuis IPFS:', error);
-      throw new Error('Impossible de récupérer les données depuis IPFS');
+    // Vérifier le cache
+    const cached = ipfsCache.get(cleanHash);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      console.log('📦 Cache hit pour', cleanHash);
+      return cached.data;
     }
+
+    // Essayer chaque gateway jusqu'à ce qu'une fonctionne
+    let lastError: any;
+    for (const gateway of IPFS_GATEWAYS) {
+      try {
+        console.log(`🔄 Tentative de récupération depuis ${gateway}`);
+        const response = await axios.get(`${gateway}${cleanHash}`, {
+          timeout: 10000, // 10 secondes de timeout
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+
+        // Mettre en cache le résultat
+        ipfsCache.set(cleanHash, {
+          data: response.data,
+          timestamp: Date.now()
+        });
+
+        console.log(`✅ Récupération réussie depuis ${gateway}`);
+        return response.data;
+      } catch (error: any) {
+        console.warn(`❌ Échec avec ${gateway}:`, error.message);
+        lastError = error;
+        // Continuer avec la gateway suivante
+        continue;
+      }
+    }
+
+    // Si toutes les gateways ont échoué
+    console.error('❌ Toutes les gateways IPFS ont échoué pour', cleanHash);
+    throw new Error(`Impossible de récupérer les données depuis IPFS: ${lastError?.message || 'Toutes les gateways ont échoué'}`);
   }
 
   /**
-   * Récupère l'URL complète d'un fichier IPFS
+   * Récupère l'URL complète d'un fichier IPFS (utilise la première gateway disponible)
    */
   getIPFSUrl(ipfsHash: string): string {
     const cleanHash = this.cleanIPFSHash(ipfsHash);
-    return `${IPFS_GATEWAY}${cleanHash}`;
+    return `${IPFS_GATEWAYS[0]}${cleanHash}`;
   }
 
   /**
@@ -136,13 +176,23 @@ export class IPFSService {
   private cleanIPFSHash(ipfsHash: string): string {
     if (!ipfsHash) return '';
 
-    // Enlever les préfixes communs
-    return ipfsHash
-      .replace('ipfs://', '')
+    // Enlever les préfixes communs de toutes les gateways
+    let cleanedHash = ipfsHash.replace('ipfs://', '');
+
+    // Enlever les préfixes de toutes les gateways connues
+    for (const gateway of IPFS_GATEWAYS) {
+      cleanedHash = cleanedHash.replace(gateway, '');
+    }
+
+    // Enlever d'autres préfixes communs
+    cleanedHash = cleanedHash
       .replace('https://ipfs.io/ipfs/', '')
       .replace('https://gateway.pinata.cloud/ipfs/', '')
-      .replace(IPFS_GATEWAY, '')
+      .replace('https://dweb.link/ipfs/', '')
+      .replace('https://cloudflare-ipfs.com/ipfs/', '')
       .trim();
+
+    return cleanedHash;
   }
 
   /**

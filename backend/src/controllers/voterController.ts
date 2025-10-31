@@ -26,7 +26,7 @@ export class VoterController {
         success: true,
         message: 'Voter registration transaction prepared',
         data: {
-          transaction: transaction.toPlainObject(),
+          transaction: transaction,
         },
       });
     } catch (error: any) {

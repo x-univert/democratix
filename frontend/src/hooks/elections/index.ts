@@ -6,3 +6,7 @@ export * from './useHasVoted';
 export * from './useGetResults';
 export * from './useIPFSMetadata';
 export * from './useGetUserVotingHistory';
+export * from './useIsVoterRegistered';
+export * from './useGetRegisteredVoters';
+export * from './useRegistrationStats';
+export * from './useRegistrationsPerDay';

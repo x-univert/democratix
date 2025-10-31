@@ -17,6 +17,9 @@ export interface Election {
   num_candidates: number;
   status: 'Pending' | 'Active' | 'Closed' | 'Finalized';
   total_votes: number;
+  requires_registration: boolean;
+  registered_voters_count: number;
+  registration_deadline?: number | null; // NOUVEAU: Date limite d'inscription (optionnel)
 }
 
 export const useGetElection = () => {
@@ -238,6 +241,36 @@ function decodeElection(hex: string, defaultId: number): Election {
 
     // Total votes (u64)
     const total_votes = bytesToNumber(bytes.slice(offset, offset + 8));
+    offset += 8;
+
+    // Nouveaux champs (pour compatibilité avec les anciennes élections)
+    let requires_registration = false;
+    let registered_voters_count = 0;
+    let registration_deadline: number | null = null;
+
+    // Vérifier s'il reste des bytes à lire (nouvelle structure)
+    if (offset < bytes.length) {
+      // Requires registration (bool - 1 byte)
+      requires_registration = bytes[offset] === 1;
+      offset += 1;
+
+      // Registered voters count (u64)
+      if (offset + 8 <= bytes.length) {
+        registered_voters_count = bytesToNumber(bytes.slice(offset, offset + 8));
+        offset += 8;
+      }
+
+      // Registration deadline (Option<u64> - 1 byte tag + optional 8 bytes)
+      if (offset < bytes.length) {
+        const hasDeadline = bytes[offset] === 1;
+        offset += 1;
+
+        if (hasDeadline && offset + 8 <= bytes.length) {
+          registration_deadline = bytesToNumber(bytes.slice(offset, offset + 8));
+          offset += 8;
+        }
+      }
+    }
 
     return {
       id: id || defaultId,
@@ -248,7 +281,10 @@ function decodeElection(hex: string, defaultId: number): Election {
       end_time,
       num_candidates,
       status,
-      total_votes
+      total_votes,
+      requires_registration,
+      registered_voters_count,
+      registration_deadline
     };
   } catch (err) {
     console.error('Error decoding election:', err);
@@ -261,7 +297,10 @@ function decodeElection(hex: string, defaultId: number): Election {
       end_time: 0,
       num_candidates: 0,
       status: 'Pending',
-      total_votes: 0
+      total_votes: 0,
+      requires_registration: false,
+      registered_voters_count: 0,
+      registration_deadline: null
     };
   }
 }

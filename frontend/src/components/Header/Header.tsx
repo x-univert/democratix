@@ -20,7 +20,6 @@ import {
   ACCOUNTS_ENDPOINT,
   getAccountProvider,
   MvxButton,
-  MvxDataWithExplorerLink,
   NotificationsFeedManager,
   useGetAccount,
   useGetIsLoggedIn,
@@ -187,15 +186,18 @@ export const Header = () => {
               place='bottom'
             >
               {() => (
-                <div
+                <button
                   onClick={headerBrowseButton.handleClick}
                   className={styles.headerNavigationButton}
+                  aria-label={headerBrowseButton.label}
+                  type="button"
                 >
                   <FontAwesomeIcon
                     className={styles.headerNavigationButtonIcon}
                     icon={headerBrowseButton.icon}
+                    aria-hidden="true"
                   />
-                </div>
+                </button>
               )}
             </Tooltip>
           ))}
@@ -208,13 +210,18 @@ export const Header = () => {
               className={styles.headerNavigationAddressWallet}
             />
 
-            <div className={styles.headerNavigationAddressExplorer}>
-              <MvxDataWithExplorerLink
-                data={address}
-                withTooltip={true}
-                explorerLink={`${explorerAddress}/${ACCOUNTS_ENDPOINT}/${address}`}
-              />
-            </div>
+            <a
+              href={`${explorerAddress}/${ACCOUNTS_ENDPOINT}/${address}`}
+              target="_blank"
+              rel="noreferrer"
+              className={styles.headerNavigationAddressExplorer}
+              aria-label={`${t('common.viewOnExplorer') || 'View account on explorer'}: ${address}`}
+              title={address}
+            >
+              <span className="font-mono text-sm">
+                {address.slice(0, 10)}...{address.slice(-6)}
+              </span>
+            </a>
 
             <Tooltip
               place='bottom'
@@ -222,12 +229,14 @@ export const Header = () => {
               content={t('common.disconnect')}
             >
               {() => (
-                <div
+                <button
                   onClick={handleLogout}
                   className={styles.headerNavigationAddressLogout}
+                  aria-label={t('common.disconnect')}
+                  type="button"
                 >
-                  <FontAwesomeIcon icon={faPowerOff} />
-                </div>
+                  <FontAwesomeIcon icon={faPowerOff} aria-hidden="true" />
+                </button>
               )}
             </Tooltip>
 
@@ -237,15 +246,17 @@ export const Header = () => {
               content={t('header.settings')}
             >
               {() => (
-                <div
+                <button
                   onClick={() => setIsSettingsOpen(true)}
                   className={classNames(
                     styles.headerNavigationAddressLogout,
                     'ml-2 cursor-pointer hover:bg-tertiary transition-colors'
                   )}
+                  aria-label={t('header.settings')}
+                  type="button"
                 >
-                  <span className="text-lg">⚙️</span>
-                </div>
+                  <span className="text-lg" role="img" aria-label="Settings">⚙️</span>
+                </button>
               )}
             </Tooltip>
           </div>
