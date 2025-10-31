@@ -55,17 +55,19 @@ export const useSubmitPrivateVote = () => {
       }
       console.log('✅ zk-SNARK service is healthy');
 
-      // Étape 2: Récupérer ou générer le secret de l'électeur
+      // Étape 2: Récupérer ou générer le secret de l'électeur (PAR WALLET)
       onProgress?.('Préparation des clés cryptographiques...', 20);
       console.log('🔑 Step 2: Loading/generating voter secret...');
+      console.log('🔑 Wallet address:', address);
 
-      let voterSecret = zkProofService.loadVoterSecret();
+      // IMPORTANT: Secret unique par adresse de wallet
+      let voterSecret = zkProofService.loadVoterSecret(address);
       if (!voterSecret) {
         voterSecret = zkProofService.generateVoterSecret();
-        zkProofService.saveVoterSecret(voterSecret);
-        console.log('🔑 New voter secret generated and saved');
+        zkProofService.saveVoterSecret(voterSecret, address);
+        console.log('🔑 New voter secret generated and saved for wallet:', address.substring(0, 10) + '...');
       } else {
-        console.log('🔑 Existing voter secret loaded');
+        console.log('🔑 Existing voter secret loaded for wallet:', address.substring(0, 10) + '...');
       }
 
       // Étape 3: Préparer le vote privé (génération + vérification de preuve)

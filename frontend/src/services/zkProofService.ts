@@ -466,11 +466,17 @@ export class ZKProofService {
   /**
    * Sauvegarde le secret de l'électeur dans le localStorage
    * ATTENTION: En production, utiliser un stockage plus sécurisé
+   *
+   * @param secret - Le secret à sauvegarder
+   * @param walletAddress - L'adresse du wallet (optionnel, pour multi-wallet)
    */
-  saveVoterSecret(secret: string): void {
+  saveVoterSecret(secret: string, walletAddress?: string): void {
     try {
-      localStorage.setItem('democratix_voter_secret', secret);
-      console.log('💾 Voter secret saved to localStorage');
+      const key = walletAddress
+        ? `democratix_voter_secret_${walletAddress}`
+        : 'democratix_voter_secret';
+      localStorage.setItem(key, secret);
+      console.log('💾 Voter secret saved to localStorage', { walletAddress: walletAddress?.substring(0, 10) + '...' });
     } catch (error) {
       console.error('❌ Failed to save voter secret:', error);
     }
@@ -478,12 +484,17 @@ export class ZKProofService {
 
   /**
    * Récupère le secret de l'électeur depuis le localStorage
+   *
+   * @param walletAddress - L'adresse du wallet (optionnel, pour multi-wallet)
    */
-  loadVoterSecret(): string | null {
+  loadVoterSecret(walletAddress?: string): string | null {
     try {
-      const secret = localStorage.getItem('democratix_voter_secret');
+      const key = walletAddress
+        ? `democratix_voter_secret_${walletAddress}`
+        : 'democratix_voter_secret';
+      const secret = localStorage.getItem(key);
       if (secret) {
-        console.log('📂 Voter secret loaded from localStorage');
+        console.log('📂 Voter secret loaded from localStorage', { walletAddress: walletAddress?.substring(0, 10) + '...' });
       }
       return secret;
     } catch (error) {
@@ -494,11 +505,16 @@ export class ZKProofService {
 
   /**
    * Supprime le secret de l'électeur du localStorage
+   *
+   * @param walletAddress - L'adresse du wallet (optionnel, pour multi-wallet)
    */
-  clearVoterSecret(): void {
+  clearVoterSecret(walletAddress?: string): void {
     try {
-      localStorage.removeItem('democratix_voter_secret');
-      console.log('🗑️ Voter secret cleared from localStorage');
+      const key = walletAddress
+        ? `democratix_voter_secret_${walletAddress}`
+        : 'democratix_voter_secret';
+      localStorage.removeItem(key);
+      console.log('🗑️ Voter secret cleared from localStorage', { walletAddress: walletAddress?.substring(0, 10) + '...' });
     } catch (error) {
       console.error('❌ Failed to clear voter secret:', error);
     }
