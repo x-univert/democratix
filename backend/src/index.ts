@@ -5,6 +5,7 @@ import { logger } from './utils/logger';
 import electionRoutes from './routes/elections';
 import voterRoutes from './routes/voters';
 import voteRoutes from './routes/votes';
+import cryptoRoutes from './routes/crypto';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.get('/health', (req, res) => {
 app.use('/api/elections', electionRoutes);
 app.use('/api/voters', voterRoutes);
 app.use('/api/votes', voteRoutes);
+app.use('/api/crypto', cryptoRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
