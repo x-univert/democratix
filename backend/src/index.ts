@@ -18,7 +18,7 @@ import { websocketService } from './services/websocketService';
 
 const app: Application = express();
 const httpServer = http.createServer(app);
-const PORT = process.env.API_PORT || 3000;
+const PORT = process.env.PORT || process.env.API_PORT || 3003;
 
 // CORS Configuration
 const allowedOrigins = [
