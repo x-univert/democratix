@@ -34,7 +34,7 @@ export class WebSocketService {
    */
   initialize(httpServer: HttpServer): void {
     // Allowed origins for WebSocket CORS
-    const allowedOrigins = [
+    const allowedOrigins: string[] = [
       process.env.CORS_ORIGIN,
       process.env.FRONTEND_URL,
       'http://localhost:3000',
@@ -43,7 +43,7 @@ export class WebSocketService {
       'https://localhost:3000',
       'https://localhost:3001',
       'https://localhost:3002',
-    ].filter(Boolean);
+    ].filter((origin): origin is string => Boolean(origin));
 
     this.io = new SocketIOServer(httpServer, {
       cors: {
