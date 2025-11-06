@@ -1,0 +1,85 @@
+=================================================================
+VARIABLES D'ENVIRONNEMENT VERCEL - DEMOCRATIX Frontend
+=================================================================
+
+INSTRUCTIONS:
+1. Allez sur Vercel Dashboard > Votre Projet > Settings > Environment Variables
+2. Pour chaque variable ci-dessous, cliquez sur "Add New"
+3. Copiez le NOM exactement
+4. Copiez la VALEUR exactement
+5. Laissez l'environnement sur "All" (Production, Preview, Development)
+6. Cliquez "Save"
+
+=================================================================
+
+VARIABLE 1:
+-----------
+Name: VITE_VOTING_CONTRACT
+Value: erd1qqqqqqqqqqqqqpgq3rdh76wraer3vd36awamzfe0f8cxs0s8d3qqf5h6tl
+
+VARIABLE 2:
+-----------
+Name: VITE_VOTER_REGISTRY_CONTRACT
+Value: erd1qqqqqqqqqqqqqpgqu6z244pwew5ep7r0mv59aa2snm80pgv6d3qqce2mtu
+
+VARIABLE 3:
+-----------
+Name: VITE_RESULTS_CONTRACT
+Value: erd1qqqqqqqqqqqqqpgqk3pxj5l8px3cvv8a26jh0fwtw4mqh7u0d3qq8p9pnr
+
+VARIABLE 4:
+-----------
+Name: VITE_NETWORK
+Value: devnet
+
+VARIABLE 5:
+-----------
+Name: VITE_API_URL
+Value: https://devnet-api.multiversx.com
+
+VARIABLE 6:
+-----------
+Name: VITE_GATEWAY_URL
+Value: https://devnet-gateway.multiversx.com
+
+VARIABLE 7:
+-----------
+Name: VITE_EXPLORER_URL
+Value: https://devnet-explorer.multiversx.com
+
+VARIABLE 8:
+-----------
+Name: VITE_BACKEND_API_URL
+Value: http://localhost:3003
+
+NOTE: On changera cette valeur après le déploiement du backend
+
+VARIABLE 9:
+-----------
+Name: VITE_PINATA_API_KEY
+Value: 582556ecae27aec7767f
+
+VARIABLE 10:
+------------
+Name: VITE_PINATA_SECRET_API_KEY
+Value: a269c8791384c64e19ba45451bec2b76d17c5ce39af798a550e82aefdd7e4cb6
+
+VARIABLE 11:
+------------
+Name: VITE_PINATA_JWT
+Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIwNTllZTNkMi0yM2YxLTRhZDctODliYi0zOGY2OWE4MzIzZDAiLCJlbWFpbCI6IngtdW5pdmVydEBwcm90b25tYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI1ODI1NTZlY2FlMjdhZWM3NzY3ZiIsInNjb3BlZEtleVNlY3JldCI6ImEyNjljODc5MTM4NGM2NGUxOWJhNDU0NTFiZWMyYjc2ZDE3YzVjZTM5YWY3OThhNTUwZTgyYWVmZGQ3ZTRjYjYiLCJleHAiOjE3OTMwMjY1MzZ9.Pdu2DApzT4-cax_AEc86QN2hIHkf-dZbJh6NqTU8cLM
+
+=================================================================
+TOTAL: 11 VARIABLES
+=================================================================
+
+APRÈS AVOIR AJOUTÉ TOUTES LES VARIABLES:
+
+1. Allez dans "Deployments"
+2. Trouvez le dernier déploiement qui a échoué
+3. Cliquez sur les "..." à droite
+4. Cliquez sur "Redeploy"
+5. Attendez 2-5 minutes
+6. Le build devrait réussir cette fois ! ✅
+
+=================================================================

@@ -1,6 +1,5 @@
 import classNames from 'classnames';
 import { Fragment, MouseEvent, PropsWithChildren, ReactNode } from 'react';
-import { Sheet } from 'react-modal-sheet';
 
 import { WithClassnameType } from 'types';
 
@@ -24,6 +23,8 @@ export const Drawer = ({
     setIsOpen(false);
   };
 
+  if (!isOpen) return null;
+
   return (
     <Fragment>
       <div
@@ -33,31 +34,22 @@ export const Drawer = ({
         })}
       />
 
-      <Sheet
-        isOpen={isOpen}
-        detent='content-height'
-        onClose={() => setIsOpen(false)}
-        className={classNames(styles.drawer, className)}
-        dragVelocityThreshold={200}
-        dragCloseThreshold={0.3}
-      >
-        <Sheet.Container className={styles.drawerContainer}>
-          <Sheet.Content>
-            <div className={styles.drawerContentWrapper}>
-              <div className={styles.drawerContentHeader}>
-                <div className={styles.drawerContentHeaderTitle}>{title}</div>
+      <div className={classNames(styles.drawer, className)}>
+        <div className={styles.drawerContainer}>
+          <div className={styles.drawerContentWrapper}>
+            <div className={styles.drawerContentHeader}>
+              <div className={styles.drawerContentHeaderTitle}>{title}</div>
 
-                <div
-                  onClick={handleDismiss}
-                  className={styles.drawerContentHeaderClose}
-                />
-              </div>
-
-              <div className={styles.drawerContent}>{children}</div>
+              <div
+                onClick={handleDismiss}
+                className={styles.drawerContentHeaderClose}
+              />
             </div>
-          </Sheet.Content>
-        </Sheet.Container>
-      </Sheet>
+
+            <div className={styles.drawerContent}>{children}</div>
+          </div>
+        </div>
+      </div>
     </Fragment>
   );
 };

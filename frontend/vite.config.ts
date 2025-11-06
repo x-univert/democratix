@@ -38,12 +38,25 @@ export default defineConfig({
   },
   resolve: {
     dedupe: ['react', 'react-dom'],
+    alias: {
+      '../node_modules/motion-utils/dist/es/globalThis-config.mjs': '../node_modules/motion-utils/dist/es/global-config.mjs'
+    }
   },
   optimizeDeps: {
-    include: ['react', 'react-dom'],
+    include: ['react', 'react-dom', 'framer-motion', 'react-modal-sheet'],
+    force: true
   },
   build: {
-    outDir: 'build'
+    outDir: 'build',
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Ignore "use client" directive warnings
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') {
+          return;
+        }
+        warn(warning);
+      }
+    }
   },
   preview: {
     port: 3002,
