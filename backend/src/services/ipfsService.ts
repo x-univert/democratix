@@ -56,6 +56,51 @@ export class IPFSService {
   }
 
   /**
+   * Upload d'un buffer (pour backup de clés chiffrées)
+   */
+  async uploadBuffer(
+    buffer: Buffer,
+    name: string,
+    metadata?: Record<string, string>
+  ): Promise<{ IpfsHash: string }> {
+    try {
+      logger.info('Uploading buffer to IPFS', { name, size: buffer.length });
+
+      // Convertir le buffer en JSON object pour Pinata
+      const jsonData = JSON.parse(buffer.toString('utf-8'));
+
+      const response = await axios.post(
+        `${this.pinataBaseUrl}/pinning/pinJSONToIPFS`,
+        {
+          pinataContent: jsonData,
+          pinataMetadata: {
+            name,
+            keyvalues: metadata || {}
+          },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            pinata_api_key: this.pinataApiKey,
+            pinata_secret_api_key: this.pinataSecretKey,
+          },
+        }
+      );
+
+      const ipfsHash = response.data.IpfsHash;
+      logger.info('Buffer upload successful', { ipfsHash, name });
+
+      return { IpfsHash: ipfsHash };
+    } catch (error: any) {
+      logger.error('Error uploading buffer to IPFS', {
+        error: error.message,
+        name,
+      });
+      throw new Error(`Failed to upload buffer to IPFS: ${error.message}`);
+    }
+  }
+
+  /**
    * Télécharger du contenu depuis IPFS
    */
   async downloadJSON(ipfsHash: string): Promise<any> {

@@ -12,7 +12,7 @@ import { promisify } from 'util';
 import { logger } from '../utils/logger';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { pinataService } from './pinataService';
+import { ipfsService } from './ipfsService';
 
 const scryptAsync = promisify(scrypt);
 
@@ -185,7 +185,7 @@ export class KeyManagementService {
       let ipfsHash: string | undefined;
       try {
         const buffer = Buffer.from(JSON.stringify(encryptedData));
-        const result = await pinataService.uploadBuffer(
+        const result = await ipfsService.uploadBuffer(
           buffer,
           `election-${electionId}-key-backup.json`,
           { electionId: electionId.toString(), type: 'elgamal-key-backup' }
@@ -198,8 +198,10 @@ export class KeyManagementService {
           url: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
         });
 
-        // Sauvegarder le hash IPFS dans les métadonnées
-        await this.saveIPFSBackupHash(electionId, ipfsHash);
+        // Sauvegarder le hash IPFS dans les métadonnées (seulement si ipfsHash existe)
+        if (ipfsHash) {
+          await this.saveIPFSBackupHash(electionId, ipfsHash);
+        }
       } catch (ipfsError: any) {
         logger.warn('⚠️  IPFS backup failed (continuing without backup)', {
           electionId,
@@ -256,7 +258,7 @@ export class KeyManagementService {
         throw new Error(`IPFS fetch failed: ${response.statusText}`);
       }
 
-      const keyData: EncryptedKeyData = await response.json();
+      const keyData = await response.json() as EncryptedKeyData;
 
       // Sauvegarder localement pour cache
       await fs.writeFile(filePath, JSON.stringify(keyData, null, 2), { mode: 0o600 });
