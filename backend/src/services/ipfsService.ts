@@ -11,10 +11,13 @@ export class IPFSService {
 
   constructor() {
     this.pinataApiKey = process.env.PINATA_API_KEY || '';
-    this.pinataSecretKey = process.env.PINATA_SECRET_KEY || '';
+    // Support both PINATA_SECRET_KEY and PINATA_SECRET_API_KEY for compatibility
+    this.pinataSecretKey = process.env.PINATA_SECRET_API_KEY || process.env.PINATA_SECRET_KEY || '';
 
     if (!this.pinataApiKey || !this.pinataSecretKey) {
       logger.warn('Pinata credentials not configured. IPFS uploads will fail.');
+    } else {
+      logger.info('✅ Pinata API credentials loaded');
     }
   }
 
