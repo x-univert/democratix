@@ -41,9 +41,13 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['react', 'react-dom'],
+    exclude: ['motion', 'motion-utils']
   },
   build: {
-    outDir: 'build'
+    outDir: 'build',
+    rollupOptions: {
+      external: ['motion', 'motion-utils']
+    }
   },
   preview: {
     port: 3002,
