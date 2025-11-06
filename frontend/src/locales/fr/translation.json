@@ -18,7 +18,17 @@
     "loadError": "Erreur lors du chargement des données. Veuillez réessayer.",
     "networkError": "Erreur réseau. Vérifiez votre connexion internet.",
     "permissionDenied": "Permission refusée. Vous n'avez pas accès à cette ressource.",
-    "genericError": "Une erreur s'est produite. Veuillez réessayer."
+    "genericError": "Une erreur s'est produite. Veuillez réessayer.",
+    "inProgress": "En cours...",
+    "progress": "Progression",
+    "pleaseWait": "Veuillez patienter...",
+    "transaction": "Transaction",
+    "validation": "Validation",
+    "confirmation": "Confirmation",
+    "errorDetails": "Détails de l'erreur :",
+    "transactionFailed": "La transaction a échoué",
+    "transactionInvalid": "Transaction invalide",
+    "transactionTimeout": "Délai d'attente dépassé"
   },
   "header": {
     "dashboard": "Dashboard",
@@ -44,7 +54,8 @@
       "devnet": "Devnet",
       "testnet": "Testnet",
       "mainnet": "Mainnet",
-      "reloadWarning": "⚠️ Rechargez la page pour appliquer le changement de réseau"
+      "reloadWarning": "⚠️ Rechargez la page pour appliquer le changement de réseau",
+      "confirmReload": "Le changement de réseau nécessite un rechargement de l'application. Continuer ?"
     },
     "language": {
       "label": "Langue",
@@ -117,6 +128,7 @@
     "days": "jours",
     "organizedBy": "Organisé par:",
     "youAreOrganizer": "👤 Vous êtes l'organisateur",
+    "youAreCoOrganizer": "🔑 Vous êtes co-organisateur",
     "actions": {
       "addCandidates": "+ Ajouter candidats",
       "activateElection": "Activer l'élection",
@@ -164,6 +176,7 @@
     "copyAddress": "Copier l'adresse",
     "activateButton": "Activer l'élection",
     "activateTooltip": "Il faut au moins 2 candidats pour activer l'élection",
+    "setupElGamal": "Configurer le Chiffrement ElGamal",
     "closeButton": "Fermer l'élection sur la blockchain",
     "finalizeButton": "Finaliser l'élection",
     "finalizeInfo": "L'élection est fermée. Finalisez-la pour publier officiellement les résultats.",
@@ -187,13 +200,16 @@
       "description": "Ajoutez des adresses à la liste blanche pour les pré-inscrire automatiquement.",
       "addressesLabel": "Adresses vérifiées (une par ligne ou séparées par des virgules)",
       "addButton": "✅ Inscrire automatiquement ces adresses",
-      "hint": "Importez un CSV avec les adresses vérifiées en copiant-collant le contenu ici.",
+      "bulkImport": "Import CSV",
+      "bulkImportError": "Erreur lors de l'import groupé",
+      "hint": "Importez un CSV avec les adresses vérifiées en cliquant sur \"Import CSV\" ou en copiant-collant le contenu manuellement.",
       "kycTitle": "Inscription automatique après KYC",
       "kycDescription": "Les adresses ajoutées à la liste blanche sont automatiquement inscrites. Utilisez cette méthode après avoir vérifié l'identité de vos électeurs via votre processus KYC hors blockchain.",
       "kycSteps": "Processus : 1) Électeur complète KYC 2) Électeur fournit son adresse MultiversX 3) Vous ajoutez l'adresse ici 4) Inscription automatique confirmée",
       "noAddresses": "Aucune adresse valide trouvée",
       "success": "Adresses ajoutées avec succès",
-      "error": "Erreur lors de l'ajout à la liste blanche"
+      "error": "Erreur lors de l'ajout à la liste blanche",
+      "addingToWhitelist": "Ajout à la liste blanche en cours..."
     },
     "invitationCodes": {
       "title": "Codes d'Invitation",
@@ -214,6 +230,15 @@
       "codeInfo": "Le code d'invitation est un identifiant unique à usage unique fourni par l'organisateur.",
       "registerSuccess": "Inscription réussie avec le code d'invitation",
       "registerError": "Erreur lors de l'inscription avec le code"
+    },
+    "qrCodes": {
+      "title": "QR Codes d'Inscription",
+      "subtitle": "Inscription Moderne par QR Code",
+      "description": "Générez des QR codes uniques que vos électeurs peuvent scanner avec leur smartphone pour s'inscrire instantanément. Parfait pour les événements en présentiel!",
+      "benefits": "Avantages : Rapide, sans contact, traçable, avec expiration configurable",
+      "generateButton": "Générer des QR Codes",
+      "hint": "Les QR codes générés peuvent être téléchargés individuellement ou en lot, et imprimés sur des badges, affiches, ou envoyés par email.",
+      "security": "Chaque QR code contient un token unique à usage unique avec expiration personnalisable."
     },
     "export": {
       "title": "Export de la Liste",
@@ -261,7 +286,37 @@
       "closeError": "Erreur lors de la fermeture de l'élection. Vérifiez que vous êtes l'organisateur.",
       "finalizeError": "Erreur lors de la finalisation de l'élection. Vérifiez que vous êtes l'organisateur et que l'élection est fermée.",
       "mustRegister": "Vous devez vous inscrire avant de pouvoir voter à cette élection."
-    }
+    },
+    "activating": "Activation en cours",
+    "activatingMessage": "L'élection est en cours d'activation sur la blockchain MultiversX.",
+    "activationSuccess": "Élection activée avec succès!",
+    "activationConfirmed": "L'élection a été activée sur la blockchain",
+    "votersCanVote": "Les électeurs peuvent maintenant voter",
+    "electionLive": "L'élection est maintenant en cours",
+    "activationInfo": "La page va se recharger automatiquement pour afficher le statut mis à jour.",
+    "activationError": "Erreur lors de l'activation",
+    "transactionFailed": "La transaction a échoué",
+    "activationSuggestions": "Suggestions :",
+    "checkCandidates": "Vérifiez qu'il y a au moins 2 candidats",
+    "checkDates": "Vérifiez que les dates sont correctes",
+    "checkBalance": "Vérifiez votre solde de tokens EGLD",
+    "retryLater": "Réessayez dans quelques instants",
+    "closingElection": "Fermeture de l'élection en cours",
+    "closingMessage": "L'élection est en cours de fermeture sur la blockchain MultiversX.",
+    "closeSuccess": "Élection fermée avec succès!",
+    "closeConfirmed": "L'élection a été fermée sur la blockchain",
+    "noMoreVotes": "Aucun nouveau vote ne peut être enregistré",
+    "electionClosed": "L'élection est maintenant fermée",
+    "closeInfo": "La page va se recharger automatiquement pour afficher le statut mis à jour.",
+    "closeError": "Erreur lors de la fermeture",
+    "finalizingElection": "Finalisation de l'élection en cours",
+    "finalizingMessage": "L'élection est en cours de finalisation sur la blockchain MultiversX.",
+    "finalizeSuccess": "Élection finalisée avec succès!",
+    "finalizeConfirmed": "L'élection a été finalisée sur la blockchain",
+    "resultsPublished": "Les résultats officiels sont maintenant publiés",
+    "electionFinalized": "L'élection est maintenant finalisée",
+    "finalizeInfo": "La page va se recharger automatiquement pour afficher les résultats finaux.",
+    "finalizeError": "Erreur lors de la finalisation"
   },
   "vote": {
     "title": "Voter",
@@ -355,6 +410,58 @@
     },
     "success": "Élection créée avec succès!",
     "error": "Erreur lors de la création de l'élection",
+    "encryption": {
+      "title": "Type de Chiffrement des Votes",
+      "subtitle": "Choisissez le niveau de confidentialité et de sécurité pour le vote",
+      "option0": {
+        "title": "Aucun chiffrement (Standard)",
+        "description": "Votes publics, résultats visibles en temps réel. Idéal pour sondages et votes transparents.",
+        "speed": "Rapide (~1s)",
+        "gas": "Gas: ~5M"
+      },
+      "option1": {
+        "title": "Option 1: ElGamal",
+        "badge": "RECOMMANDÉ",
+        "description": "Vote chiffré avec déchiffrement après clôture. Confidentialité + comptage des résultats.",
+        "speed": "Rapide (~1s)",
+        "gas": "Gas: ~10M",
+        "feature1": "Comptage possible"
+      },
+      "option2": {
+        "title": "Option 2: ElGamal + zk-SNARK",
+        "badge": "SÉCURITÉ MAX",
+        "description": "Chiffrement + preuve mathématique de validité. Anonymat total avec nullifier.",
+        "speed": "Plus lent (~3-4s)",
+        "gas": "Gas: ~50M",
+        "feature1": "Preuve validité",
+        "feature2": "Anonymat total"
+      },
+      "info": {
+        "title": "Informations importantes",
+        "item1": "Une paire de clés ElGamal sera générée automatiquement",
+        "item2": "Vous recevrez une clé privée à conserver précieusement",
+        "item3": "Seul vous pourrez déchiffrer les votes après la clôture",
+        "item4": "Les électeurs pourront choisir entre vote standard et vote privé",
+        "learnMore": "En savoir plus sur les options de chiffrement"
+      },
+      "compareLink": "Comparer les options en détail"
+    },
+    "progressTitle": "Progression de la création",
+    "progress": {
+      "uploadIPFS": "Upload des métadonnées sur IPFS",
+      "createElection": "Création de l'élection sur la blockchain",
+      "confirmElection": "Attente de confirmation de l'élection",
+      "addCandidate": "Ajout du candidat: {{name}}",
+      "ipfsHashResult": "Hash IPFS: {{hash}}",
+      "uploadFailed": "Échec de l'upload sur IPFS",
+      "txHashResult": "TX: {{hash}}",
+      "attemptStatus": "Tentative {{attempt}}/{{max}} - Statut: {{status}}",
+      "transactionConfirmed": "Transaction confirmée",
+      "uploadingToIPFS": "Upload sur IPFS...",
+      "addingToBlockchain": "Ajout sur la blockchain...",
+      "successfullyAdded": "Ajouté avec succès",
+      "failedToAdd": "Échec de l'ajout du candidat"
+    },
     "confirmModal": {
       "title": "Créer cette élection",
       "message": "Êtes-vous sûr de vouloir créer l'élection \"{{electionTitle}}\"? Les informations seront enregistrées sur la blockchain et IPFS.",
@@ -431,6 +538,39 @@
     "blockchainNotice": "🔒 Résultats vérifiables et immuables sur la blockchain MultiversX",
     "viewAllElections": "← Voir toutes les élections",
     "electionDetails": "Détails de l'élection",
+    "anonymousVotes": "Votes Anonymes (zk-SNARK)",
+    "anonymousVotesDesc": "Votes cryptographiquement privés - Identité protégée",
+    "privateVotesCount": "Votes privés",
+    "verified": "Vérifiés",
+    "cryptographicallyVerified": "Preuves zk-SNARK validées",
+    "anonymous": "Anonymat",
+    "identityProtected": "Identité protégée",
+    "uniqueness": "Unicité",
+    "uniqueNullifiers": "Nullifiers uniques",
+    "privacyGuarantee": "Garantie de Confidentialité",
+    "privacyPoint1": "Le choix du candidat n'est jamais révélé",
+    "privacyPoint2": "Seul le commitment (hash cryptographique) est visible",
+    "privacyPoint3": "Nullifiers empêchent le double vote sans révéler l'identité",
+    "privacyPoint4": "Preuves zk-SNARK garantissent la validité mathématique",
+    "hideDetails": "Masquer les détails",
+    "showDetails": "Afficher les détails",
+    "voteCommitments": "Commitments de Vote",
+    "voteCommitment": "Commitment",
+    "nullifier": "Nullifier",
+    "whatIsCommitment": "Qu'est-ce qu'un commitment?",
+    "commitmentExplanation": "Hash cryptographique qui cache le vote mais permet de le vérifier plus tard.",
+    "whatIsNullifier": "Qu'est-ce qu'un nullifier?",
+    "nullifierExplanation": "Identifiant unique qui empêche le double vote sans révéler l'identité de l'électeur.",
+    "noPrivateVotes": "Aucun vote privé pour cette élection",
+    "privateVotesAppearHere": "Les votes zk-SNARK apparaîtront ici",
+    "elgamal": {
+      "title": "Votes Chiffrés ElGamal",
+      "titleOption2": "Votes Chiffrés ElGamal + zk-SNARK",
+      "description": "Option 1 - Déchiffrez les votes avec votre clé privée",
+      "descriptionOption2": "Option 2 - {{count}} votes chiffrés - Déchiffrez avec votre clé privée",
+      "decryptButton": "Déchiffrer les votes",
+      "info": "En tant qu'organisateur, vous pouvez déchiffrer les votes ElGamal en utilisant la clé privée que vous avez téléchargée lors de la configuration. Le déchiffrement révélera le nombre de votes pour chaque candidat tout en préservant l'anonymat des électeurs."
+    },
     "errors": {
       "notFound": "Résultats non trouvés",
       "notAvailable": "Les résultats ne sont pas encore disponibles. L'élection doit être fermée pour afficher les résultats.",
@@ -494,7 +634,9 @@
       "viewAll": "Voir toutes les élections",
       "viewAllDesc": "Parcourir toutes les élections",
       "myProfile": "Mon profil",
-      "myProfileDesc": "Voir mon historique de votes"
+      "myProfileDesc": "Voir mon historique de votes",
+      "exportPDF": "Export PDF",
+      "exportPDFDesc": "Télécharger le rapport complet"
     },
     "noElections": {
       "title": "🎯 Vous n'avez pas encore créé d'élection",
@@ -693,5 +835,242 @@
   },
   "accessibility": {
     "skipToMainContent": "Aller au contenu principal"
+  },
+  "elgamal": {
+    "title": "Configuration du Chiffrement ElGamal",
+    "subtitle": "Option 1 - Vote privé avec comptage des résultats",
+    "checking": "Vérification des clés existantes...",
+    "generate": {
+      "title": "Génération des clés de chiffrement",
+      "description": "Cette opération va générer une paire de clés ElGamal pour votre élection. La clé publique sera stockée sur la blockchain et permettra aux électeurs de chiffrer leurs votes. La clé privée doit être sauvegardée de manière sécurisée par vous, l'organisateur."
+    },
+    "warning": {
+      "title": "Important",
+      "message": "Vous devrez télécharger et sauvegarder votre clé privée. Sans elle, vous ne pourrez pas déchiffrer les votes après la clôture de l'élection."
+    },
+    "errors": {
+      "noWallet": "Veuillez connecter votre wallet",
+      "downloadFirst": "Veuillez télécharger la clé privée d'abord",
+      "signFailed": "Échec de la signature de la transaction"
+    },
+    "copied": {
+      "public": "Clé publique copiée",
+      "private": "Clé privée copiée"
+    },
+    "generating": "Génération en cours...",
+    "generateButton": "Générer les clés ElGamal",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "copy": "Copier",
+    "success": {
+      "title": "Clés générées avec succès",
+      "message": "Vos clés ElGamal ont été générées. Veuillez les sauvegarder maintenant."
+    },
+    "publicKey": {
+      "title": "Clé Publique",
+      "description": "Cette clé sera stockée sur la blockchain et utilisée par les électeurs"
+    },
+    "privateKey": {
+      "title": "Clé Privée",
+      "warning": "ATTENTION : Cette clé ne sera plus affichée. Téléchargez-la maintenant !"
+    },
+    "downloaded": "Clé privée téléchargée",
+    "downloadButton": "Télécharger la clé privée",
+    "downloadFirst": "Vous devez d'abord télécharger la clé privée",
+    "continueButton": "Continuer",
+    "signAndStore": "Signer et stocker la clé publique",
+    "extensionWillOpen": "L'extension MultiversX s'ouvrira pour signer la transaction",
+    "transaction": {
+      "title": "Prochaine étape : Stocker la clé publique",
+      "message": "Signez la transaction pour stocker la clé publique sur la blockchain. Cela permettra aux électeurs de chiffrer leurs votes."
+    },
+    "signing": {
+      "title": "Signature en cours...",
+      "message": "Veuillez signer la transaction dans votre wallet pour stocker la clé publique sur la blockchain.",
+      "waiting": "En attente de confirmation..."
+    },
+    "complete": {
+      "title": "Clés générées et sauvegardées !",
+      "message": "Vos clés ElGamal sont prêtes. Vous devez maintenant signer la transaction dans votre wallet pour stocker la clé publique on-chain.",
+      "nextSteps": "Prochaines étapes :",
+      "step1": "Ouvrir votre wallet (xPortal ou MultiversX Web Wallet)",
+      "step2": "Signer la transaction avec les données fournies",
+      "step3": "Attendre la confirmation sur la blockchain",
+      "step4": "Activer votre élection et les électeurs pourront voter de manière chiffrée"
+    },
+    "decrypt": {
+      "title": "Déchiffrement des Votes ElGamal",
+      "subtitle": "Utilisez votre clé privée pour déchiffrer les votes",
+      "upload": {
+        "title": "Charger votre clé privée",
+        "description": "Chargez le fichier contenant votre clé privée ElGamal que vous avez téléchargée lors de la configuration de l'élection.",
+        "clickToUpload": "Cliquez pour charger votre clé privée",
+        "manualInput": "Ou collez votre clé privée manuellement :",
+        "placeholder": "Collez votre clé privée ici..."
+      },
+      "warning": {
+        "title": "Sécurité",
+        "message": "Votre clé privée ne sera jamais envoyée au serveur. Le déchiffrement est effectué de manière sécurisée côté serveur."
+      },
+      "decrypting": "Déchiffrement en cours...",
+      "decryptButton": "Déchiffrer les votes",
+      "progress": {
+        "title": "Déchiffrement en cours...",
+        "message": "Veuillez patienter pendant que nous déchiffrons les votes"
+      },
+      "success": {
+        "title": "Déchiffrement réussi !",
+        "message": "Les votes ont été déchiffrés avec succès."
+      },
+      "results": {
+        "title": "Résultats déchiffrés",
+        "candidate": "Candidat",
+        "total": "Total"
+      },
+      "downloadResults": "Télécharger les résultats (JSON)",
+      "error": {
+        "title": "Erreur de déchiffrement",
+        "message": "Une erreur est survenue lors du déchiffrement.",
+        "noPrivateKey": "Veuillez charger votre clé privée"
+      },
+      "retry": "Réessayer",
+      "errors": {
+        "noPrivateKey": "Veuillez charger votre clé privée"
+      }
+    },
+    "download": "Télécharger"
+  },
+  "coOrganizers": {
+    "title": "Organisateurs de l'élection",
+    "loading": "Chargement des organisateurs...",
+    "addButton": "Ajouter un co-organisateur",
+    "cancelButton": "Annuler",
+    "form": {
+      "addressLabel": "Adresse du co-organisateur",
+      "addressPlaceholder": "erd1...",
+      "permissionsLabel": "Permissions",
+      "canSetupEncryption": "Peut configurer le chiffrement ElGamal",
+      "canDecryptVotes": "Peut déchiffrer les votes privés",
+      "canAddCoOrganizers": "Peut ajouter/retirer des co-organisateurs",
+      "submitButton": "Ajouter le co-organisateur"
+    },
+    "primaryOrganizer": "ORGANISATEUR PRINCIPAL",
+    "allRights": "Tous les droits et permissions",
+    "coOrganizer": "CO-ORGANISATEUR",
+    "permissions": {
+      "setupEncryption": "Configurer le chiffrement",
+      "decryptVotes": "Déchiffrer votes",
+      "manageCoOrganizers": "Gérer co-organisateurs"
+    },
+    "addedBy": "Ajouté le {{date}} par {{address}}",
+    "removeButton": "Retirer",
+    "empty": {
+      "title": "Aucun co-organisateur",
+      "message": "Cette élection n'a pas encore de co-organisateurs."
+    },
+    "errors": {
+      "loadError": "Impossible de charger les organisateurs",
+      "addError": "Erreur lors de l'ajout du co-organisateur",
+      "removeError": "Erreur lors du retrait du co-organisateur",
+      "mustBeConnected": "Vous devez être connecté pour retirer un co-organisateur"
+    },
+    "success": {
+      "added": "Co-organisateur ajouté avec succès",
+      "removed": "Co-organisateur retiré avec succès"
+    },
+    "modal": {
+      "title": "Retirer le co-organisateur",
+      "message": "Êtes-vous sûr de vouloir retirer {{address}} ? Cette action est irréversible et le co-organisateur perdra immédiatement tous ses accès et permissions.",
+      "confirmButton": "Oui, retirer",
+      "cancelButton": "Annuler"
+    }
+  },
+  "registrationModal": {
+    "title": "Inscription en cours",
+    "processing": "Traitement de votre inscription...",
+    "pleaseWait": "Veuillez patienter pendant que la transaction est validée sur la blockchain.",
+    "transactionHash": "Hash de transaction :",
+    "success": "Inscription réussie !",
+    "successMessage": "Vous êtes maintenant inscrit à cette élection. Vous pouvez voter !",
+    "error": "Échec de l'inscription",
+    "errorMessage": "La transaction a échoué. Veuillez vérifier votre code d'invitation et réessayer.",
+    "close": "Continuer",
+    "retry": "Fermer"
+  },
+  "bulkImport": {
+    "title": "Importation Groupée d'Électeurs",
+    "instructions": "Instructions",
+    "step1": "Téléchargez le modèle CSV ci-dessous",
+    "step2": "Remplissez le fichier avec les adresses MultiversX (erd1...)",
+    "step3": "Importez le fichier et vérifiez la preview",
+    "step4": "Confirmez l'ajout à la whitelist",
+    "downloadTemplate": "Télécharger le modèle CSV",
+    "selectFile": "Sélectionner un fichier CSV",
+    "validate": "Valider",
+    "validAddresses": "Adresses Valides",
+    "invalidAddresses": "Adresses Invalides",
+    "preview": "Aperçu des adresses valides",
+    "errors": "Erreurs détectées",
+    "andMore": "et {{count}} de plus",
+    "import": "Importer {{count}} adresse(s)",
+    "invalidFileType": "Format de fichier non supporté. Utilisez CSV ou TXT.",
+    "missingAddress": "Adresse manquante",
+    "invalidAddress": "Adresse invalide (doit commencer par \"erd1\" et avoir 62 caractères)",
+    "parseError": "Erreur lors de la lecture du fichier: {{message}}"
+  },
+  "networkStatus": {
+    "offline": "Mode Hors Ligne",
+    "offlineMessage": "Vous êtes déconnecté. Certaines fonctionnalités sont limitées.",
+    "online": "Connexion Rétablie",
+    "onlineMessage": "Vous êtes de nouveau en ligne."
+  },
+  "qrGenerator": {
+    "title": "Générateur de QR Codes",
+    "instructions": "Comment utiliser",
+    "step1": "Générez des QR codes avec expiration personnalisée",
+    "step2": "Chaque QR code contient un token unique à usage unique",
+    "step3": "Distribuez les QR codes aux électeurs (email, impression, etc.)",
+    "step4": "L'électeur scanne le QR et s'inscrit automatiquement",
+    "countLabel": "Nombre de QR codes",
+    "expirationLabel": "Expiration (heures)",
+    "generate": "Générer les QR Codes",
+    "invalidCount": "Nombre invalide (1-1000)",
+    "invalidExpiration": "Expiration invalide (1-720 heures)",
+    "downloadCSV": "Télécharger CSV",
+    "generated": "{{count}} QR code(s) généré(s)",
+    "copyURL": "Copier URL",
+    "downloadQR": "Télécharger QR",
+    "details": "Détails du QR Code",
+    "urlCopied": "URL copiée dans le presse-papier!",
+    "loadingTitle": "Génération en cours...",
+    "loadingText": "Veuillez patienter pendant que les codes d'invitation sont générés sur la blockchain. Cela peut prendre quelques secondes.",
+    "loadingTextBatch": "Génération par lots de 100 codes pour optimiser les coûts en gas. Veuillez signer chaque transaction.",
+    "batchProgress": "Transaction {{current}} sur {{total}} (max 100 codes par transaction)"
+  },
+  "register": {
+    "title": "Inscription via QR Code",
+    "subtitle": "Vous avez scanné un QR code d'inscription",
+    "loading": "Chargement...",
+    "errorTitle": "Erreur",
+    "invalidLink": "Lien d'inscription invalide",
+    "invalidToken": "Code d'invitation invalide",
+    "electionNotFound": "Élection non trouvée",
+    "backToElections": "Retour aux élections",
+    "electionInfo": "Information sur l'élection",
+    "electionName": "Nom",
+    "electionDescription": "Description",
+    "electionId": "ID",
+    "connectWallet": "Connectez votre wallet",
+    "connectWalletDescription": "Vous devez connecter votre wallet MultiversX pour vous inscrire à cette élection.",
+    "connectButton": "Connecter mon wallet",
+    "tokenLabel": "Code d'invitation",
+    "walletLabel": "Votre wallet",
+    "registerButton": "S'inscrire à cette élection",
+    "registering": "Inscription en cours...",
+    "registrationInProgress": "Inscription en cours",
+    "registered": "Inscription réussie !",
+    "successMessage": "Inscription réussie ! Redirection en cours...",
+    "hint": "Vous devrez signer la transaction avec votre wallet. Ce code ne peut être utilisé qu'une seule fois.",
+    "registrationError": "Erreur lors de l'inscription. Le code est peut-être invalide ou déjà utilisé."
   }
 }

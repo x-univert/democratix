@@ -1,0 +1,16 @@
+# Fichiers à ne pas uploader sur Vercel
+node_modules
+.git
+.env.local
+.env.development
+*.log
+cypress
+tests
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+README.md
+docs
+.vscode
+.idea

@@ -129,11 +129,29 @@ export const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
     localStorage.setItem('language', language);
   }, [language, i18n]);
 
-  // Sauvegarder le réseau sélectionné
+  // Sauvegarder le réseau sélectionné et recharger l'application
   useEffect(() => {
-    localStorage.setItem('selectedNetwork', selectedNetwork);
-    // TODO: Implémenter le changement de réseau
-  }, [selectedNetwork]);
+    const currentNetwork = localStorage.getItem('selectedNetwork') || 'devnet';
+
+    if (selectedNetwork !== currentNetwork) {
+      localStorage.setItem('selectedNetwork', selectedNetwork);
+
+      // Afficher un message de confirmation avant le rechargement
+      const confirmReload = window.confirm(
+        t('settings.network.confirmReload', {
+          defaultValue: 'Le changement de réseau nécessite un rechargement de l\'application. Continuer ?'
+        })
+      );
+
+      if (confirmReload) {
+        // Recharger la page pour appliquer le nouveau réseau
+        window.location.reload();
+      } else {
+        // Annuler le changement
+        setSelectedNetwork(currentNetwork as Network);
+      }
+    }
+  }, [selectedNetwork, t]);
 
   const handleThemeChange = (newMode: ThemeMode) => {
     setThemeMode(newMode);

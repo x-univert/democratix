@@ -1,0 +1,1 @@
+export { DecryptElGamalModal } from './DecryptElGamalModal';

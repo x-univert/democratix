@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useGetAccount } from 'lib';
 import { RouteNamesEnum } from 'localConstants';
-import { useGetElection, useGetCandidates, useCandidateMetadata, useIPFSImage, type Election, type Candidate } from 'hooks/elections';
+import { useGetElection, useGetCandidates, useCandidateMetadata, useIPFSImage, type Election, type Candidate, useGetPrivateVotes, useGetPrivateVotesOption2, useIsCoOrganizer } from 'hooks/elections';
 import { useGetCandidateVotes } from 'hooks/elections/useGetCandidateVotes';
+import { useWebSocketNotifications } from 'hooks/useWebSocketNotifications';
+import { AnonymousVotesPanel } from 'components/AnonymousVotesPanel';
+import { DecryptElGamalModal } from 'components';
+import { exportResultsToPDF } from '../../utils/pdfExport';
+import axios from 'axios';
 import {
   BarChart,
   Bar,
@@ -116,6 +122,7 @@ export const Results = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { address } = useGetAccount();
   const { getElection } = useGetElection();
   const { getCandidates } = useGetCandidates();
   const { getCandidateVotes } = useGetCandidateVotes();
@@ -124,6 +131,87 @@ export const Results = () => {
   const [candidatesWithVotes, setCandidatesWithVotes] = useState<CandidateWithVotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDecryptModal, setShowDecryptModal] = useState(false);
+  const [elgamalDecryptedVotes, setElgamalDecryptedVotes] = useState<Record<number, number> | null>(null);
+  const [canDecrypt, setCanDecrypt] = useState(false);
+
+  // Fetch private votes (zk-SNARK legacy - Option 0)
+  const electionId = id ? parseInt(id) : null;
+
+  // WebSocket notifications for real-time updates
+  useWebSocketNotifications(electionId || undefined);
+  const { privateVotes, totalPrivateVotes, isLoading: isLoadingPrivateVotes } = useGetPrivateVotes(electionId);
+
+  // Fetch private votes Option 2 (ElGamal + zk-SNARK)
+  const { privateVotesOption2, totalPrivateVotesOption2, isLoading: isLoadingPrivateVotesOption2 } = useGetPrivateVotesOption2(electionId);
+
+  // Check if user is organizer or co-organizer with decrypt permission
+  const { isOrganizer, isPrimaryOrganizer } = useIsCoOrganizer(
+    election?.id || 0,
+    election?.organizer || ''
+  );
+
+  // Load ElGamal decrypted votes from localStorage on mount
+  useEffect(() => {
+    if (!electionId) return;
+
+    const storedVotes = localStorage.getItem(`elgamal-decrypted-${electionId}`);
+    if (storedVotes) {
+      try {
+        const parsed = JSON.parse(storedVotes);
+        console.log('📊 Loaded ElGamal decrypted votes from localStorage:', parsed);
+
+        // Le backend retourne {results: {...}, totalVotes, decryptedAt, ...}
+        // On ne sauvegarde que la partie "results" directement
+        if (parsed && typeof parsed === 'object') {
+          setElgamalDecryptedVotes(parsed);
+          console.log('✅ ElGamal votes loaded successfully from localStorage');
+        } else {
+          console.warn('⚠️ Invalid format in localStorage');
+          localStorage.removeItem(`elgamal-decrypted-${electionId}`);
+        }
+      } catch (err) {
+        console.error('❌ Failed to parse stored ElGamal votes:', err);
+        // Nettoyer localStorage corrompu
+        localStorage.removeItem(`elgamal-decrypted-${electionId}`);
+      }
+    } else {
+      console.log('ℹ️ No ElGamal decrypted votes found in localStorage for election', electionId);
+    }
+  }, [electionId]);
+
+  // Check if user can decrypt (primary organizer or co-organizer with canDecryptVotes permission)
+  useEffect(() => {
+    const checkDecryptPermission = async () => {
+      if (!electionId || !address) {
+        setCanDecrypt(false);
+        return;
+      }
+
+      // Primary organizer can always decrypt
+      if (isPrimaryOrganizer) {
+        setCanDecrypt(true);
+        return;
+      }
+
+      // Check if co-organizer has decrypt permission
+      try {
+        const response = await axios.get(
+          `${import.meta.env.VITE_BACKEND_API_URL}/api/elections/${electionId}/organizers`
+        );
+        const organizersData = response.data.data || response.data;
+        const coOrg = organizersData.coOrganizers?.find(
+          (co: any) => co.address.toLowerCase() === address.toLowerCase()
+        );
+        setCanDecrypt(coOrg?.permissions?.canDecryptVotes || false);
+      } catch (err) {
+        console.error('Error checking decrypt permission:', err);
+        setCanDecrypt(false);
+      }
+    };
+
+    checkDecryptPermission();
+  }, [electionId, address, isPrimaryOrganizer]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -160,9 +248,17 @@ export const Results = () => {
           return;
         }
 
+        console.log('🔍 Fetching votes with elgamalDecryptedVotes state:', elgamalDecryptedVotes);
+
         const votesPromises = candidates.map(async (candidate) => {
-          const votes = await getCandidateVotes(electionId, candidate.id);
-          return { ...candidate, votes, percentage: 0 };
+          const standardVotes = await getCandidateVotes(electionId, candidate.id);
+          // Add ElGamal decrypted votes if available
+          const elgamalVotes = elgamalDecryptedVotes?.[candidate.id] || 0;
+          const totalVotes = standardVotes + elgamalVotes;
+
+          console.log(`📊 Candidate ${candidate.id} (${candidate.name}): standard=${standardVotes}, elgamal=${elgamalVotes}, total=${totalVotes}`);
+
+          return { ...candidate, votes: totalVotes, percentage: 0 };
         });
 
         const results = await Promise.all(votesPromises);
@@ -183,7 +279,7 @@ export const Results = () => {
     };
 
     fetchData();
-  }, [id]);
+  }, [id, elgamalDecryptedVotes]);
 
   const handleShare = (platform: 'twitter' | 'facebook' | 'linkedin') => {
     if (!election) return;
@@ -275,6 +371,26 @@ export const Results = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = async () => {
+    if (!election || candidatesWithVotes.length === 0) return;
+
+    try {
+      await exportResultsToPDF({
+        election: {
+          ...election,
+          total_votes: candidatesWithVotes.reduce((sum, c) => sum + c.votes, 0)
+        },
+        candidates: candidatesWithVotes,
+        includeCharts: true,
+        chartElementId: 'charts-container',
+        includeAuditTrail: false, // Peut être activé si on a les hashes de transactions
+      });
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Erreur lors de l\'export PDF. Veuillez réessayer.');
+    }
+  };
+
   const formatDateTime = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -358,13 +474,20 @@ export const Results = () => {
               <span>in</span>
               LinkedIn
             </button>
-            {/* Bouton d'export */}
+            {/* Boutons d'export */}
             <button
               onClick={handleExportTxt}
               className="bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-all font-semibold flex items-center gap-2 shadow-md whitespace-nowrap"
             >
-              <span>📥</span>
-              {t('results.export')}
+              <span>📄</span>
+              Export TXT
+            </button>
+            <button
+              onClick={handleExportPDF}
+              className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-all font-semibold flex items-center gap-2 shadow-md whitespace-nowrap"
+            >
+              <span>📄</span>
+              Export PDF
             </button>
           </div>
         </div>
@@ -404,7 +527,7 @@ export const Results = () => {
 
       {/* Graphiques */}
       {hasVotes && candidatesWithVotes.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div id="charts-container" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           {/* Graphique en barres */}
           <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 shadow-md">
             <h3 className="text-xl font-bold text-primary mb-4">{t('results.charts.votesByCandidate')}</h3>
@@ -494,6 +617,77 @@ export const Results = () => {
           </div>
         )}
       </div>
+
+      {/* Anonymous Votes Panel (zk-SNARK) */}
+      <div className="mb-8">
+        <AnonymousVotesPanel
+          electionId={electionId!}
+          privateVotes={privateVotes}
+          totalPrivateVotes={totalPrivateVotes}
+          isLoading={isLoadingPrivateVotes}
+        />
+      </div>
+
+      {/* ElGamal Encrypted Votes Section (Organizer or Co-Organizer with decrypt permission) */}
+      {canDecrypt && election && (election.status === 'Closed' || election.status === 'Finalized') && (election.encryption_type === 1 || election.encryption_type === 2) && (
+        <div className="mb-8">
+          <div className="bg-gradient-to-r from-teal-500 to-teal-600 border-2 border-teal-500 rounded-xl p-6 shadow-lg">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <span className="text-5xl">🔓</span>
+                <div>
+                  <h3 className="text-2xl font-bold text-white mb-1">
+                    {election.encryption_type === 2
+                      ? (t('results.elgamal.titleOption2') || 'Votes Chiffrés ElGamal + zk-SNARK')
+                      : (t('results.elgamal.title') || 'Votes Chiffrés ElGamal')}
+                  </h3>
+                  <p className="text-teal-100 text-sm">
+                    {election.encryption_type === 2
+                      ? (t('results.elgamal.descriptionOption2', { count: totalPrivateVotesOption2 }) || `Option 2 - ${totalPrivateVotesOption2} votes chiffrés - Déchiffrez avec votre clé privée`)
+                      : (t('results.elgamal.description') || 'Option 1 - Déchiffrez les votes avec votre clé privée')}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDecryptModal(true)}
+                className="px-6 py-3 bg-white text-teal-600 rounded-lg hover:bg-gray-100 transition-all font-semibold shadow-md flex items-center gap-2 whitespace-nowrap"
+              >
+                <span>🔓</span>
+                <span>{t('results.elgamal.decryptButton') || 'Déchiffrer les votes'}</span>
+              </button>
+            </div>
+            <div className="mt-4 bg-white bg-opacity-10 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <span className="text-xl">ℹ️</span>
+                <p className="text-gray-900 text-sm leading-relaxed font-medium">
+                  {t('results.elgamal.info') ||
+                    'En tant qu\'organisateur autorisé, vous pouvez déchiffrer les votes ElGamal en utilisant la clé privée. Le déchiffrement révélera le nombre de votes pour chaque candidat tout en préservant l\'anonymat des électeurs.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decrypt ElGamal Modal */}
+      <DecryptElGamalModal
+        isOpen={showDecryptModal}
+        onClose={() => setShowDecryptModal(false)}
+        electionId={electionId || 0}
+        onSuccess={(decryptedVotes) => {
+          console.log('Votes déchiffrés:', decryptedVotes);
+
+          // Save ONLY results to localStorage (not the entire response object)
+          if (electionId && decryptedVotes.results) {
+            localStorage.setItem(`elgamal-decrypted-${electionId}`, JSON.stringify(decryptedVotes.results));
+            console.log('✅ ElGamal decrypted votes saved to localStorage');
+          }
+
+          // Update state to trigger re-render
+          setElgamalDecryptedVotes(decryptedVotes.results);
+          setShowDecryptModal(false);
+        }}
+      />
 
       {/* Footer */}
       <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 text-center">

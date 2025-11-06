@@ -1,0 +1,1 @@
+export { CoOrganizersPanel } from './CoOrganizersPanel';

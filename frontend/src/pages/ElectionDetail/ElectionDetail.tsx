@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGetAccount, useGetNetworkConfig } from 'lib';
 import { votingContract } from 'config';
-import { useGetElection, type Election, useElectionMetadata, useIPFSImage, useCandidateMetadata } from '../../hooks/elections';
+import { useGetElection, type Election, useElectionMetadata, useIPFSImage, useCandidateMetadata, useHasVoted, useHasVotedPrivately, useIsCoOrganizer } from '../../hooks/elections';
 import { useGetCandidates, type Candidate } from '../../hooks/elections/useGetCandidates';
 import { useGetCandidateVotes } from '../../hooks/elections/useGetCandidateVotes';
 import { useGetRegisteredVoters } from '../../hooks/elections/useGetRegisteredVoters';
@@ -16,10 +16,37 @@ import { useGenerateInvitationCodes } from '../../hooks/transactions/useGenerate
 import { useRegisterWithCode } from '../../hooks/transactions/useRegisterWithCode';
 import { useIsVoterRegistered } from '../../hooks/elections/useIsVoterRegistered';
 import { useTransactionWatcher } from '../../hooks/transactions/useTransactionWatcher';
+import { useWebSocketNotifications } from '../../hooks/useWebSocketNotifications';
 import { RouteNamesEnum } from '../../localConstants';
 import { SkeletonDetail } from '../../components/Skeleton';
 import { ErrorMessage } from '../../components/ErrorMessage';
-import { ConfirmModal, InvitationCodesModal, TransactionSentModal } from '../../components';
+import { ConfirmModal, InvitationCodesModal, InvitationCodesGeneratorModal, TransactionSentModal, TransactionProgressModal, SetupElGamalModal, CoOrganizersPanel, EncryptionTypeBadge, RegistrationModal, BulkImportModal, QRCodeGeneratorModal } from '../../components';
+
+// Helper function to fix UTF-8 encoding issues
+const fixEncoding = (str: string): string => {
+  try {
+    // Si le texte contient des caractères mal encodés comme "Ã©" au lieu de "é"
+    // Cela signifie que des bytes UTF-8 ont été mal interprétés comme ISO-8859-1
+    // Solution: encoder en ISO-8859-1 (Latin-1) puis décoder en UTF-8
+
+    // Détecter si le texte semble mal encodé
+    if (!str.includes('Ã') && !str.includes('â') && !str.includes('Ã©')) {
+      return str; // Pas de problème d'encodage détecté
+    }
+
+    // Convertir la chaîne mal interprétée en bytes
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      bytes[i] = str.charCodeAt(i);
+    }
+
+    // Décoder les bytes en UTF-8
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(bytes);
+  } catch {
+    return str;
+  }
+};
 
 interface CandidateWithVotes extends Candidate {
   votes: number;
@@ -116,6 +143,11 @@ export const ElectionDetail = () => {
   const { addToWhitelist } = useAddToWhitelist();
   const { generateCodes } = useGenerateInvitationCodes();
   const { registerWithCode } = useRegisterWithCode();
+  const { hasVoted: checkHasVoted } = useHasVoted();
+  const hasVotedPrivately = useHasVotedPrivately(id ? parseInt(id) : null);
+
+  // WebSocket notifications for real-time updates
+  useWebSocketNotifications(id ? parseInt(id) : undefined);
 
   // Fetch registered voters for export functionality
   const { voters: registeredVoters, loading: loadingVoters } = useGetRegisteredVoters(
@@ -123,34 +155,68 @@ export const ElectionDetail = () => {
   );
 
   const [election, setElection] = useState<Election | null>(null);
+
+  // Hook pour vérifier si l'utilisateur est organisateur (principal ou co-organisateur)
+  // Doit être appelé avant tout return early pour respecter les règles des hooks
+  const { isOrganizer, isPrimaryOrganizer, isCoOrganizer } = useIsCoOrganizer(
+    election?.id || 0,
+    election?.organizer || ''
+  );
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [candidatesWithVotes, setCandidatesWithVotes] = useState<CandidateWithVotes[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingResults, setLoadingResults] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [elgamalDecryptedVotes, setElgamalDecryptedVotes] = useState<Record<number, number> | null>(null);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showFinalizeModal, setShowFinalizeModal] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
   const [checkingRegistration, setCheckingRegistration] = useState(false);
+  const [alreadyVoted, setAlreadyVoted] = useState(false);
 
   // Whitelist management
   const [whitelistAddresses, setWhitelistAddresses] = useState('');
   const [showWhitelistSection, setShowWhitelistSection] = useState(false);
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
 
   // Invitation codes
   const [invitationCodeCount, setInvitationCodeCount] = useState('1');
   const [generatedCodes, setGeneratedCodes] = useState<string[]>([]);
   const [showInvitationSection, setShowInvitationSection] = useState(false);
   const [showCodesModal, setShowCodesModal] = useState(false);
+
+  // QR Codes
+  const [showQRSection, setShowQRSection] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [showInvitationCodesGeneratorModal, setShowInvitationCodesGeneratorModal] = useState(false);
   const [showTxSentModal, setShowTxSentModal] = useState(false);
   const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
+  const [showElGamalModal, setShowElGamalModal] = useState(false);
 
   // Registration with code
   const [invitationCode, setInvitationCode] = useState('');
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [registrationTxHash, setRegistrationTxHash] = useState<string | null>(null);
 
   // Export voters
   const [showExportSection, setShowExportSection] = useState(false);
+
+  // Activation modal
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [activationTxHash, setActivationTxHash] = useState<string | null>(null);
+
+  // Close election modal
+  const [showCloseTransactionModal, setShowCloseTransactionModal] = useState(false);
+  const [closeTxHash, setCloseTxHash] = useState<string | null>(null);
+
+  // Finalize election modal
+  const [showFinalizeTransactionModal, setShowFinalizeTransactionModal] = useState(false);
+  const [finalizeTxHash, setFinalizeTxHash] = useState<string | null>(null);
+
+  // Whitelist transaction modal
+  const [showWhitelistTransactionModal, setShowWhitelistTransactionModal] = useState(false);
+  const [whitelistTxHash, setWhitelistTxHash] = useState<string | null>(null);
 
   // Watch transaction for invitation codes generation
   const { result: txResult, loading: txLoading } = useTransactionWatcher(pendingTxHash);
@@ -158,6 +224,23 @@ export const ElectionDetail = () => {
   // Récupérer les métadonnées IPFS de l'élection
   const { metadata: electionMetadata, loading: metadataLoading } = useElectionMetadata(election?.description_ipfs);
   const electionImageUrl = useIPFSImage(electionMetadata?.image);
+
+  // Load ElGamal decrypted votes from localStorage on mount
+  useEffect(() => {
+    if (!id) return;
+
+    const electionId = parseInt(id);
+    const storedVotes = localStorage.getItem(`elgamal-decrypted-${electionId}`);
+    if (storedVotes) {
+      try {
+        const parsed = JSON.parse(storedVotes);
+        console.log('📊 Loaded ElGamal decrypted votes from localStorage:', parsed);
+        setElgamalDecryptedVotes(parsed.results);
+      } catch (err) {
+        console.error('❌ Failed to parse stored ElGamal votes:', err);
+      }
+    }
+  }, [id]);
 
   useEffect(() => {
     const fetchElectionAndCandidates = async () => {
@@ -203,8 +286,14 @@ export const ElectionDetail = () => {
       setLoadingResults(true);
       try {
         const votesPromises = candidates.map(async (candidate) => {
-          const votes = await getCandidateVotes(election.id, candidate.id);
-          return { ...candidate, votes, percentage: 0 };
+          const standardVotes = await getCandidateVotes(election.id, candidate.id);
+          // Add ElGamal decrypted votes if available
+          const elgamalVotes = elgamalDecryptedVotes?.[candidate.id] || 0;
+          const totalVotes = standardVotes + elgamalVotes;
+
+          console.log(`📊 Candidate ${candidate.id} (${candidate.name}): standard=${standardVotes}, elgamal=${elgamalVotes}, total=${totalVotes}`);
+
+          return { ...candidate, votes: totalVotes, percentage: 0 };
         });
 
         const results = await Promise.all(votesPromises);
@@ -224,7 +313,7 @@ export const ElectionDetail = () => {
     };
 
     fetchVotes();
-  }, [election, candidates]);
+  }, [election, candidates, elgamalDecryptedVotes]);
 
   // Check voter registration status
   useEffect(() => {
@@ -248,6 +337,27 @@ export const ElectionDetail = () => {
 
     checkRegistration();
   }, [election, address]);
+
+  // Check if user has already voted (standard or private)
+  useEffect(() => {
+    const checkVoteStatus = async () => {
+      if (!election || !address) {
+        setAlreadyVoted(hasVotedPrivately);
+        return;
+      }
+
+      try {
+        const voted = await checkHasVoted(election.id);
+        // Combiner vote standard ET vote privé
+        setAlreadyVoted(voted || hasVotedPrivately);
+      } catch (err) {
+        console.error('Error checking vote status:', err);
+        setAlreadyVoted(hasVotedPrivately);
+      }
+    };
+
+    checkVoteStatus();
+  }, [election, address, hasVotedPrivately]);
 
   // Watch for transaction completion and extract invitation codes
   useEffect(() => {
@@ -345,9 +455,6 @@ export const ElectionDetail = () => {
   const shouldClose = (isActive || isPending) && election.end_time < now;
   const canAddCandidates = isPending && election.end_time > now;
 
-  const isOrganizer = address && election.organizer &&
-    address.toLowerCase() === election.organizer.toLowerCase();
-
   const formatDateTime = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -382,14 +489,31 @@ export const ElectionDetail = () => {
   };
 
   const handleConfirmActivate = async () => {
-    if (!election) return;
+    if (!election || !address) return;
     setShowActivateModal(false);
+
     try {
-      await activateElection(election.id);
-      setTimeout(() => window.location.reload(), 2000);
+      // Appel de la fonction d'activation avec récupération du hash
+      const result = await activateElection(election.id);
+      console.log('Activation result:', result);
+
+      // Afficher le modal de progression avec le hash de transaction
+      setActivationTxHash(result.transactionHash || null);
+      setShowActivationModal(true);
     } catch (err) {
       console.error('Erreur lors de l\'activation:', err);
+      alert(t('electionDetail.activationError') || 'Erreur lors de l\'activation de l\'élection');
     }
+  };
+
+  const handleActivationSuccess = () => {
+    // Recharger la page pour voir les changements
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleCloseActivationModal = () => {
+    setShowActivationModal(false);
+    setActivationTxHash(null);
   };
 
   const handleVote = () => {
@@ -409,8 +533,14 @@ export const ElectionDetail = () => {
     if (!election) return;
     setShowCloseModal(false);
     try {
-      await closeElection(election.id);
-      setTimeout(() => window.location.reload(), 2000);
+      const result = await closeElection(election.id);
+      if (result && result.transactionHash) {
+        setCloseTxHash(result.transactionHash);
+        setShowCloseTransactionModal(true);
+      } else {
+        // Fallback if no transaction hash
+        setTimeout(() => window.location.reload(), 2000);
+      }
     } catch (err) {
       console.error('Erreur lors de la fermeture:', err);
       alert(t('electionDetail.errors.closeError'));
@@ -425,12 +555,47 @@ export const ElectionDetail = () => {
     if (!election) return;
     setShowFinalizeModal(false);
     try {
-      await finalizeElection(election.id);
-      setTimeout(() => window.location.reload(), 2000);
+      const result = await finalizeElection(election.id);
+      if (result && result.transactionHash) {
+        setFinalizeTxHash(result.transactionHash);
+        setShowFinalizeTransactionModal(true);
+      } else {
+        // Fallback if no transaction hash
+        setTimeout(() => window.location.reload(), 2000);
+      }
     } catch (err) {
       console.error('Erreur lors de la finalisation:', err);
       alert(t('electionDetail.errors.finalizeError'));
     }
+  };
+
+  // Transaction modal handlers
+  const handleCloseTransactionSuccess = () => {
+    setShowCloseTransactionModal(false);
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleCloseTransactionClose = () => {
+    setShowCloseTransactionModal(false);
+  };
+
+  const handleFinalizeTransactionSuccess = () => {
+    setShowFinalizeTransactionModal(false);
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleFinalizeTransactionClose = () => {
+    setShowFinalizeTransactionModal(false);
+  };
+
+  const handleWhitelistTransactionSuccess = () => {
+    setShowWhitelistTransactionModal(false);
+    setWhitelistAddresses('');
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleWhitelistTransactionClose = () => {
+    setShowWhitelistTransactionModal(false);
   };
 
   // Whitelist handlers
@@ -449,12 +614,33 @@ export const ElectionDetail = () => {
         return;
       }
 
-      await addToWhitelist(election.id, addresses);
-      setWhitelistAddresses('');
-      alert(t('electionDetail.whitelist.success') || `${addresses.length} adresse(s) ajoutée(s) avec succès`);
+      const result = await addToWhitelist(election.id, addresses);
+
+      if (result && result.transactionHashes && result.transactionHashes.length > 0) {
+        setWhitelistTxHash(result.transactionHashes[0]);
+        setShowWhitelistTransactionModal(true);
+      }
     } catch (err) {
       console.error('Erreur lors de l\'ajout à la liste blanche:', err);
       alert(t('electionDetail.whitelist.error') || 'Erreur lors de l\'ajout à la liste blanche');
+    }
+  };
+
+  // Bulk import handler
+  const handleBulkImport = async (addresses: string[]) => {
+    if (!election || addresses.length === 0) return;
+
+    try {
+      const result = await addToWhitelist(election.id, addresses);
+
+      if (result && result.transactionHashes && result.transactionHashes.length > 0) {
+        setWhitelistTxHash(result.transactionHashes[0]);
+        setShowWhitelistTransactionModal(true);
+        setWhitelistAddresses(''); // Clear manual input
+      }
+    } catch (err) {
+      console.error('Erreur lors de l\'import groupé:', err);
+      alert(t('electionDetail.whitelist.bulkImportError') || 'Erreur lors de l\'import groupé');
     }
   };
 
@@ -529,16 +715,48 @@ export const ElectionDetail = () => {
     if (!election || !invitationCode.trim()) return;
 
     try {
-      await registerWithCode(election.id, invitationCode);
+      const sessionId = await registerWithCode(election.id, invitationCode);
       setInvitationCode('');
-      // Refresh registration status
-      const registered = await isVoterRegistered(election.id, address);
-      setIsRegistered(registered);
-      alert(t('electionDetail.invitationCodes.registerSuccess') || 'Inscription réussie avec le code d\'invitation');
+
+      // Get transaction hash from sessionId
+      // Wait a bit for the transaction to be sent
+      setTimeout(async () => {
+        try {
+          const response = await fetch(`${network.apiAddress}/transactions?sender=${address}&status=pending`);
+          const txs = await response.json();
+          if (txs && txs.length > 0) {
+            const latestTx = txs[0];
+            setRegistrationTxHash(latestTx.txHash);
+            setShowRegistrationModal(true);
+          }
+        } catch (err) {
+          console.error('Could not fetch transaction hash:', err);
+          // Show modal anyway without tx hash
+          setShowRegistrationModal(true);
+        }
+      }, 1000);
     } catch (err) {
       console.error('Erreur lors de l\'inscription avec code:', err);
       alert(t('electionDetail.invitationCodes.registerError') || 'Erreur lors de l\'inscription avec le code');
     }
+  };
+
+  // Registration modal handlers
+  const handleRegistrationSuccess = async () => {
+    // Refresh registration status
+    if (election && address) {
+      const registered = await isVoterRegistered(election.id, address);
+      setIsRegistered(registered);
+    }
+    setShowRegistrationModal(false);
+    setRegistrationTxHash(null);
+    // Reload page after a short delay to see changes
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleRegistrationClose = () => {
+    setShowRegistrationModal(false);
+    setRegistrationTxHash(null);
   };
 
   // Export voters handlers
@@ -620,27 +838,32 @@ export const ElectionDetail = () => {
     : 0;
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-7xl">
       {/* Back button */}
       <button
         onClick={() => navigate(RouteNamesEnum.elections)}
-        className="mb-6 px-6 py-2 bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-all hover:-translate-x-1 font-semibold"
+        className="mb-4 sm:mb-6 px-4 sm:px-6 py-2 text-sm sm:text-base bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-all hover:-translate-x-1 font-semibold touch-manipulation"
       >
         ← {t('electionDetail.backToElections')}
       </button>
 
       {/* Header */}
-      <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-8 mb-6 shadow-lg">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-4">
-          <h1 className="text-4xl font-bold text-primary flex-1">{election.title}</h1>
-          <div className={`${badge.bgClass} ${badge.textClass} px-4 py-2 rounded-full text-sm font-semibold uppercase tracking-wide shadow-md`}>
+      <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-4 sm:p-6 lg:p-8 mb-4 sm:mb-6 shadow-lg">
+        <div className="flex flex-col md:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary flex-1">{fixEncoding(election.title)}</h1>
+          <div className={`${badge.bgClass} ${badge.textClass} election-status-badge px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold uppercase tracking-wide shadow-md`}>
             {badge.text}
           </div>
         </div>
 
-        {isOrganizer && (
-          <div className="bg-accent bg-opacity-10 border-2 border-accent rounded-lg px-4 py-2 inline-block">
-            <span className="text-accent font-semibold">{t('electionDetail.youAreOrganizer')}</span>
+        {isPrimaryOrganizer && (
+          <div className="bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 border-2 border-amber-500 rounded-lg px-4 py-2 inline-block">
+            <span className="text-amber-800 dark:text-amber-200 font-bold">👑 Vous êtes l'organisateur principal</span>
+          </div>
+        )}
+        {isCoOrganizer && (
+          <div className="bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 border-2 border-purple-500 rounded-lg px-4 py-2 inline-block">
+            <span className="text-purple-800 dark:text-purple-200 font-bold">🔑 Vous êtes co-organisateur</span>
           </div>
         )}
       </div>
@@ -653,17 +876,17 @@ export const ElectionDetail = () => {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
             </svg>
             <div className="flex-1">
-              <div className="text-sm font-bold text-primary uppercase tracking-wide mb-1">
+              <div className="text-sm font-bold election-time-text uppercase tracking-wide mb-1">
                 {isActive ? `⏰ ${t('electionDetail.time.timeRemaining')}` : `🗓️ ${t('electionDetail.time.electionStart')}`}
               </div>
-              <span className="text-2xl font-bold text-primary">{timeRemaining()}</span>
+              <span className="text-2xl font-bold election-time-text">{timeRemaining()}</span>
             </div>
           </div>
           {isActive && (
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-primary font-bold">{t('electionDetail.progress')}</span>
-                <span className="text-primary font-bold text-lg">{Math.round(progressPercent)}%</span>
+                <span className="election-time-text font-bold">{t('electionDetail.progress')}</span>
+                <span className="election-time-text font-bold text-lg">{Math.round(progressPercent)}%</span>
               </div>
               <div className="h-3 bg-secondary border-2 border-secondary vibe-border rounded-full overflow-hidden shadow-inner">
                 <div
@@ -671,7 +894,7 @@ export const ElectionDetail = () => {
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
-              <div className="flex justify-between text-xs text-primary font-semibold pt-1">
+              <div className="flex justify-between text-xs election-time-text font-semibold pt-1">
                 <span>{t('electionDetail.start')}: {formatDateTime(election.start_time)}</span>
                 <span>{t('electionDetail.end')}: {formatDateTime(election.end_time)}</span>
               </div>
@@ -690,7 +913,7 @@ export const ElectionDetail = () => {
               <img
                 src={electionImageUrl}
                 alt={election.title}
-                className="w-full h-64 object-cover"
+                className="w-full h-48 sm:h-56 md:h-64 object-cover"
                 onError={(e) => {
                   // En cas d'erreur de chargement, on cache l'image
                   e.currentTarget.style.display = 'none';
@@ -700,8 +923,8 @@ export const ElectionDetail = () => {
           )}
 
           {/* Description */}
-          <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 shadow-md">
-            <h2 className="text-xl font-bold text-primary mb-4">{t('electionDetail.description')}</h2>
+          <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-4 sm:p-6 shadow-md">
+            <h2 className="text-lg sm:text-xl font-bold text-primary mb-3 sm:mb-4">{t('electionDetail.description')}</h2>
             {metadataLoading ? (
               <div className="flex items-center gap-2 text-secondary">
                 <div className="w-5 h-5 border-2 border-secondary border-t-accent rounded-full animate-spin"></div>
@@ -710,8 +933,8 @@ export const ElectionDetail = () => {
             ) : electionMetadata?.description ? (
               <div className="prose prose-invert max-w-none">
                 <p className="text-primary whitespace-pre-wrap">{electionMetadata.description}</p>
-                {electionMetadata.metadata?.category && (
-                  <div className="mt-4 flex items-center gap-2">
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {electionMetadata.metadata?.category && (
                     <span className="inline-block px-3 py-1 bg-accent bg-opacity-20 text-accent rounded-full text-sm font-semibold">
                       {electionMetadata.metadata.category === 'presidential' && `🏛️ ${t('createElection.form.categories.presidential')}`}
                       {electionMetadata.metadata.category === 'legislative' && `📜 ${t('createElection.form.categories.legislative')}`}
@@ -720,8 +943,9 @@ export const ElectionDetail = () => {
                       {electionMetadata.metadata.category === 'association' && `🤝 ${t('createElection.form.categories.association')}`}
                       {electionMetadata.metadata.category === 'other' && `📋 ${t('createElection.form.categories.other')}`}
                     </span>
-                  </div>
-                )}
+                  )}
+                  <EncryptionTypeBadge encryptionType={election.encryption_type} size="medium" />
+                </div>
               </div>
             ) : (
               <p className="text-secondary italic">{t('electionDetail.noDescription')}</p>
@@ -729,15 +953,15 @@ export const ElectionDetail = () => {
           </div>
 
           {/* Candidates section */}
-          <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-primary">
+          <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-4 sm:p-6 shadow-md">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <h2 className="text-lg sm:text-xl font-bold text-primary">
                 {t('electionDetail.candidates')} ({candidates.length})
               </h2>
               {isOrganizer && canAddCandidates && (
                 <button
                   onClick={handleAddCandidate}
-                  className="px-4 py-2 bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-colors font-semibold text-sm"
+                  className="w-full sm:w-auto px-4 py-2 bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-colors font-semibold text-sm touch-manipulation"
                 >
                   + {t('electionDetail.addButton')}
                 </button>
@@ -764,6 +988,16 @@ export const ElectionDetail = () => {
               </div>
             )}
           </div>
+
+          {/* Co-Organizers Panel - Visible to all organizers */}
+          {isOrganizer && (
+            <div className="mb-6">
+              <CoOrganizersPanel
+                electionId={election.id}
+                primaryOrganizer={election.organizer}
+              />
+            </div>
+          )}
 
           {/* Organizer Management Sections */}
           {isOrganizer && election.requires_registration && (
@@ -810,16 +1044,26 @@ export const ElectionDetail = () => {
                       />
                     </div>
 
-                    <button
-                      onClick={handleAddToWhitelist}
-                      disabled={!whitelistAddresses.trim()}
-                      className="w-full bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {t('electionDetail.whitelist.addButton') || '✅ Inscrire automatiquement ces adresses'}
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleAddToWhitelist}
+                        disabled={!whitelistAddresses.trim()}
+                        className="flex-1 bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {t('electionDetail.whitelist.addButton') || '✅ Inscrire automatiquement ces adresses'}
+                      </button>
+
+                      <button
+                        onClick={() => setShowBulkImportModal(true)}
+                        className="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-all font-semibold flex items-center gap-2 whitespace-nowrap"
+                      >
+                        <span>📊</span>
+                        {t('electionDetail.whitelist.bulkImport') || 'Import CSV'}
+                      </button>
+                    </div>
 
                     <div className="bg-accent bg-opacity-10 border border-accent rounded-lg p-3 text-xs text-secondary">
-                      <p>💡 {t('electionDetail.whitelist.hint') || 'Importez un CSV avec les adresses vérifiées en copiant-collant le contenu ici.'}</p>
+                      <p>💡 {t('electionDetail.whitelist.hint') || 'Importez un CSV avec les adresses vérifiées en cliquant sur "Import CSV" ou en copiant-collant le contenu manuellement.'}</p>
                     </div>
                   </div>
                 )}
@@ -869,7 +1113,7 @@ export const ElectionDetail = () => {
                     </div>
 
                     <button
-                      onClick={handleGenerateCodes}
+                      onClick={() => setShowInvitationCodesGeneratorModal(true)}
                       className="w-full bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-all font-semibold"
                     >
                       {t('electionDetail.invitationCodes.generateButton') || 'Générer les codes'}
@@ -966,6 +1210,52 @@ export const ElectionDetail = () => {
                       <p>💡 {t('electionDetail.invitationCodes.hint') || 'Les codes générés s\'afficheront automatiquement ici et dans une fenêtre modale.'}</p>
                       <p className="text-accent font-semibold">
                         🔒 {t('electionDetail.invitationCodes.securityHint') || 'Sécurité : Distribuez chaque code de manière sécurisée à un seul électeur vérifié. Une fois utilisé, le code ne peut plus être réutilisé.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* QR Codes Section */}
+              <div className="bg-secondary border-2 border-accent vibe-border rounded-xl p-6 shadow-md">
+                <button
+                  onClick={() => setShowQRSection(!showQRSection)}
+                  className="w-full flex justify-between items-center mb-4"
+                >
+                  <h2 className="text-xl font-bold text-primary">
+                    📱 {t('electionDetail.qrCodes.title') || 'QR Codes d\'Inscription'}
+                  </h2>
+                  <span className="text-accent text-2xl">{showQRSection ? '−' : '+'}</span>
+                </button>
+
+                {showQRSection && (
+                  <div className="space-y-4">
+                    <div className="bg-purple-50 dark:bg-purple-900/20 border-2 border-purple-200 dark:border-purple-800 rounded-lg p-4 space-y-2">
+                      <h3 className="text-sm font-bold text-purple-800 dark:text-purple-300">
+                        📱 {t('electionDetail.qrCodes.subtitle') || 'Inscription Moderne par QR Code'}
+                      </h3>
+                      <p className="text-secondary text-xs leading-relaxed">
+                        {t('electionDetail.qrCodes.description') || 'Générez des QR codes uniques que vos électeurs peuvent scanner avec leur smartphone pour s\'inscrire instantanément. Parfait pour les événements en présentiel!'}
+                      </p>
+                      <div className="bg-primary bg-opacity-50 rounded p-2 mt-2">
+                        <p className="text-xs text-secondary font-medium">
+                          ✅ {t('electionDetail.qrCodes.benefits') || 'Avantages : Rapide, sans contact, traçable, avec expiration configurable'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setShowQRModal(true)}
+                      className="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-all font-semibold flex items-center justify-center gap-2"
+                    >
+                      <span>📱</span>
+                      {t('electionDetail.qrCodes.generateButton') || 'Générer des QR Codes'}
+                    </button>
+
+                    <div className="bg-accent bg-opacity-10 border border-accent rounded-lg p-3 text-xs text-secondary space-y-1">
+                      <p>💡 {t('electionDetail.qrCodes.hint') || 'Les QR codes générés peuvent être téléchargés individuellement ou en lot, et imprimés sur des badges, affiches, ou envoyés par email.'}</p>
+                      <p className="text-accent font-semibold">
+                        🔒 {t('electionDetail.qrCodes.security') || 'Chaque QR code contient un token unique à usage unique avec expiration personnalisable.'}
                       </p>
                     </div>
                   </div>
@@ -1073,10 +1363,39 @@ export const ElectionDetail = () => {
                 <span className="block text-3xl font-bold text-primary mb-1">{election.num_candidates}</span>
                 <span className="text-xs text-secondary uppercase tracking-wide">{election.num_candidates > 1 ? t('electionCard.candidates_plural') : t('electionCard.candidates')}</span>
               </div>
-              <div className="text-center p-4 bg-primary rounded-lg">
-                <span className="block text-3xl font-bold text-primary mb-1">{election.total_votes}</span>
-                <span className="text-xs text-secondary uppercase tracking-wide">{election.total_votes > 1 ? t('electionCard.votes_plural') : t('electionCard.votes')}</span>
-              </div>
+
+              {/* Afficher les inscrits si l'élection requiert l'inscription */}
+              {election.requires_registration ? (
+                <>
+                  <div className="text-center p-4 bg-primary rounded-lg">
+                    <span className="block text-3xl font-bold text-primary mb-1">{election.registered_voters_count}</span>
+                    <span className="text-xs text-secondary uppercase tracking-wide">{t('electionCard.registered')}</span>
+                  </div>
+                  <div className="text-center p-4 bg-primary rounded-lg">
+                    <span className="block text-3xl font-bold text-primary mb-1">{election.total_votes}</span>
+                    <span className="text-xs text-secondary uppercase tracking-wide">{election.total_votes > 1 ? t('electionCard.votes_plural') : t('electionCard.votes')}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center p-4 bg-primary rounded-lg">
+                  <span className="block text-3xl font-bold text-primary mb-1">{election.total_votes}</span>
+                  <span className="text-xs text-secondary uppercase tracking-wide">{election.total_votes > 1 ? t('electionCard.votes_plural') : t('electionCard.votes')}</span>
+                </div>
+              )}
+
+              {/* Afficher le taux de participation seulement si approprié */}
+              {((election.requires_registration && election.registered_voters_count > 0) || (!election.requires_registration && election.total_votes > 0)) && (
+                <div className="text-center p-4 bg-primary rounded-lg col-span-2">
+                  <span className="block text-3xl font-bold text-primary mb-1">
+                    {election.requires_registration && election.registered_voters_count > 0
+                      ? Math.round((election.total_votes / election.registered_voters_count) * 100)
+                      : election.num_candidates > 0
+                      ? Math.min(Math.round((election.total_votes / (election.num_candidates * 100)) * 100), 100)
+                      : 0}%
+                  </span>
+                  <span className="text-xs text-secondary uppercase tracking-wide">{t('electionCard.participation')}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1131,8 +1450,19 @@ export const ElectionDetail = () => {
 
           {/* Actions */}
           <div className="space-y-3">
-            {/* Organizer actions (pending) - Activer */}
-            {isOrganizer && canActivate && (
+            {/* ElGamal Setup Button (Organizer only, pending status) */}
+            {isOrganizer && isPending && (
+              <button
+                onClick={() => setShowElGamalModal(true)}
+                className="w-full bg-gradient-to-r from-teal-500 to-teal-600 text-white px-6 py-3 rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all font-semibold shadow-md flex items-center justify-center gap-2"
+              >
+                <span>🔐</span>
+                <span>{t('electionDetail.setupElGamal') || 'Configurer le Chiffrement ElGamal'}</span>
+              </button>
+            )}
+
+            {/* Organizer PRINCIPAL actions (pending) - Activer */}
+            {isPrimaryOrganizer && canActivate && (
               <button
                 onClick={handleActivate}
                 className="w-full bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-all font-semibold disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
@@ -1144,8 +1474,8 @@ export const ElectionDetail = () => {
               </button>
             )}
 
-            {/* Organizer actions (active expired) - Fermer sur blockchain */}
-            {isOrganizer && shouldClose && (
+            {/* Organizer PRINCIPAL actions (active expired) - Fermer sur blockchain */}
+            {isPrimaryOrganizer && shouldClose && (
               <div className="space-y-2">
                 <div className="bg-orange-500 bg-opacity-20 border-2 border-orange-500 rounded-lg p-3 text-sm text-primary font-bold">
                   ⚠️ {t('electionDetail.expiredWarning')}
@@ -1215,8 +1545,18 @@ export const ElectionDetail = () => {
               </div>
             )}
 
+            {/* Already voted badge */}
+            {alreadyVoted && isActive && (
+              <div className="bg-success bg-opacity-10 border-2 border-success rounded-lg p-4">
+                <h3 className="text-lg font-bold mb-2" style={{ color: '#000000' }}>✅ VOUS AVEZ DEJA VOTE</h3>
+                <p className="text-sm" style={{ color: '#000000' }}>
+                  Vous avez déjà participé à cette élection. Votre vote a été enregistré avec succès sur la blockchain.
+                </p>
+              </div>
+            )}
+
             {/* Vote button (active elections not expired) */}
-            {isActive && !shouldClose && (!election.requires_registration || isRegistered) && (
+            {isActive && !shouldClose && (!election.requires_registration || isRegistered) && !alreadyVoted && (
               <button
                 onClick={handleVote}
                 className="w-full bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-all font-semibold uppercase tracking-wide shadow-md btn-vote"
@@ -1225,8 +1565,8 @@ export const ElectionDetail = () => {
               </button>
             )}
 
-            {/* Finalize button (closed elections, organizer only) */}
-            {isOrganizer && isClosed && !isFinalized && (
+            {/* Finalize button (closed elections, ORGANIZER PRINCIPAL only) */}
+            {isPrimaryOrganizer && isClosed && !isFinalized && (
               <div className="space-y-2">
                 <div className="bg-accent bg-opacity-10 border-2 border-accent rounded-lg p-3 text-sm">
                   <span className="text-accent font-bold">ℹ️ {t('electionDetail.finalizeInfo')}</span>
@@ -1302,6 +1642,92 @@ export const ElectionDetail = () => {
         electionId={election?.id || 0}
         electionTitle={election?.title || ''}
       />
+
+      {/* Activation Modal */}
+      <TransactionProgressModal
+        isOpen={showActivationModal}
+        transactionHash={activationTxHash || undefined}
+        title={t('electionDetail.activating') || 'Activation en cours'}
+        onClose={handleCloseActivationModal}
+        onSuccess={handleActivationSuccess}
+      />
+
+      {/* Close Election Modal */}
+      <TransactionProgressModal
+        isOpen={showCloseTransactionModal}
+        transactionHash={closeTxHash || undefined}
+        title={t('electionDetail.closingElection') || 'Fermeture de l\'élection en cours'}
+        onClose={handleCloseTransactionClose}
+        onSuccess={handleCloseTransactionSuccess}
+      />
+
+      {/* Finalize Election Modal */}
+      <TransactionProgressModal
+        isOpen={showFinalizeTransactionModal}
+        transactionHash={finalizeTxHash || undefined}
+        title={t('electionDetail.finalizingElection') || 'Finalisation de l\'élection en cours'}
+        onClose={handleFinalizeTransactionClose}
+        onSuccess={handleFinalizeTransactionSuccess}
+      />
+
+      {/* Whitelist Transaction Modal */}
+      <TransactionProgressModal
+        isOpen={showWhitelistTransactionModal}
+        transactionHash={whitelistTxHash || undefined}
+        title={t('electionDetail.whitelist.addingToWhitelist') || 'Ajout à la liste blanche en cours'}
+        onClose={handleWhitelistTransactionClose}
+        onSuccess={handleWhitelistTransactionSuccess}
+      />
+
+      {/* ElGamal Setup Modal */}
+      <SetupElGamalModal
+        isOpen={showElGamalModal}
+        onClose={() => setShowElGamalModal(false)}
+        electionId={election?.id || 0}
+        onSuccess={() => {
+          setShowElGamalModal(false);
+          // Optionally reload election data to show updated encryption status
+          setTimeout(() => window.location.reload(), 2000);
+        }}
+      />
+
+      {/* Registration Modal */}
+      <RegistrationModal
+        isOpen={showRegistrationModal}
+        transactionHash={registrationTxHash || undefined}
+        onClose={handleRegistrationClose}
+        onSuccess={handleRegistrationSuccess}
+      />
+
+      {/* Bulk Import Modal */}
+      {election && (
+        <BulkImportModal
+          isOpen={showBulkImportModal}
+          electionId={election.id}
+          onClose={() => setShowBulkImportModal(false)}
+          onImport={handleBulkImport}
+        />
+      )}
+
+      {/* QR Code Generator Modal */}
+      {election && address && (
+        <QRCodeGeneratorModal
+          isOpen={showQRModal}
+          electionId={election.id}
+          organizerAddress={address}
+          onClose={() => setShowQRModal(false)}
+        />
+      )}
+
+      {/* Invitation Codes Generator Modal */}
+      {election && address && (
+        <InvitationCodesGeneratorModal
+          isOpen={showInvitationCodesGeneratorModal}
+          electionId={election.id}
+          organizerAddress={address}
+          onClose={() => setShowInvitationCodesGeneratorModal(false)}
+        />
+      )}
 
       {/* Loading indicator for transaction watching */}
       {txLoading && (

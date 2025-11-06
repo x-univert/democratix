@@ -6,38 +6,42 @@ import { routes } from 'routes';
 import { AxiosInterceptors, BatchTransactionsContextProvider } from 'wrappers';
 
 import { Layout, ScrollToTop } from './components';
+import { ToastProvider } from './contexts/ToastContext';
+import { ToastContainer } from './components/Toast';
 
 export const App = () => {
   return (
-    <Router>
-      <ScrollToTop />
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          ariaProps: {
-            role: 'status',
-            'aria-live': 'polite' as 'polite',
-          },
-          className: '',
-          style: {},
-          success: {
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+    <ToastProvider>
+      <Router>
+        <ScrollToTop />
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            ariaProps: {
+              role: 'status',
+              'aria-live': 'polite' as 'polite',
             },
-          },
-          error: {
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            className: '',
+            style: {},
+            success: {
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-      <AxiosInterceptors>
-        <BatchTransactionsContextProvider>
-          <Layout>
+            error: {
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+        <ToastContainer />
+        <AxiosInterceptors>
+          <BatchTransactionsContextProvider>
+            <Layout>
             <Routes>
               {routes.map((route) => (
                 <Route
@@ -59,6 +63,7 @@ export const App = () => {
           </Layout>
         </BatchTransactionsContextProvider>
       </AxiosInterceptors>
-    </Router>
+      </Router>
+    </ToastProvider>
   );
 };

@@ -13,5 +13,7 @@ export enum RouteNamesEnum {
   results = '/results/:id',
   profile = '/profile',
   adminDashboard = '/admin/dashboard',
-  about = '/about'
+  about = '/about',
+  encryptionOptions = '/encryption-options',
+  register = '/register/:id'
 }

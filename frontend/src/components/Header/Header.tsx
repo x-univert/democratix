@@ -34,6 +34,7 @@ interface HeaderBrowseButtonType {
   icon: IconDefinition;
   isVisible: boolean;
   label: string;
+  hideOnMobile?: boolean;
 }
 
 export const Header = () => {
@@ -53,7 +54,7 @@ export const Header = () => {
   const handleLogout = async (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
     await provider.logout();
-    navigate(RouteNamesEnum.home);
+    navigate(RouteNamesEnum.elections);
   };
 
   const handleGitHubBrowsing = (event: MouseEvent<HTMLDivElement>) => {
@@ -81,25 +82,28 @@ export const Header = () => {
       label: t('header.about') || 'About',
       handleClick: handleAboutBrowsing,
       icon: faInfoCircle,
-      isVisible: true
+      isVisible: true,
+      hideOnMobile: false
     },
     {
       label: 'GitHub',
       handleClick: handleGitHubBrowsing,
       icon: faGithub as IconDefinition,
-      isVisible: true
+      isVisible: true,
+      hideOnMobile: false
     },
     {
       label: 'Notifications',
       handleClick: handleNotificationsBrowsing,
       icon: faBell,
-      isVisible: isLoggedIn
+      isVisible: isLoggedIn,
+      hideOnMobile: false
     }
   ];
 
   const handleLogoClick = (event: MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
-    navigate(isLoggedIn ? RouteNamesEnum.dashboard : RouteNamesEnum.home);
+    navigate(isLoggedIn ? RouteNamesEnum.elections : RouteNamesEnum.home);
   };
 
   // Fermer le menu en cliquant à l'extérieur
@@ -136,14 +140,14 @@ export const Header = () => {
 
       {/* Menu de navigation déroulant DEMOCRATIX */}
       {isLoggedIn && (
-        <div className="relative ml-4" ref={menuRef}>
+        <div className="relative ml-2 sm:ml-4" ref={menuRef}>
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="flex items-center gap-2 px-4 py-2 bg-secondary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-all font-medium text-primary"
+            className="flex items-center gap-2 px-2 sm:px-4 py-2 bg-secondary border-2 border-secondary vibe-border rounded-lg hover:bg-tertiary transition-all font-medium text-primary"
           >
             <span className="text-lg">{activeRoute?.icon || '📋'}</span>
-            <span>{activeRoute?.label || t('header.menu')}</span>
-            <span className={`text-secondary transition-transform text-xs ${isMenuOpen ? 'rotate-180' : ''}`}>
+            <span className="max-[639px]:hidden">{activeRoute?.label || t('header.menu')}</span>
+            <span className={`max-[639px]:hidden text-secondary transition-transform text-xs ${isMenuOpen ? 'rotate-180' : ''}`}>
               ▼
             </span>
           </button>
@@ -177,30 +181,39 @@ export const Header = () => {
 
       <nav className={styles.headerNavigation}>
         <div className={styles.headerNavigationButtons}>
-          {headerBrowseButtons.map((headerBrowseButton) => (
-            <Tooltip
-              className={classNames({ hidden: !headerBrowseButton.isVisible })}
-              identifier={`header-${headerBrowseButton.label}-button`}
-              key={`header-${headerBrowseButton.label}-button`}
-              content={headerBrowseButton.label}
-              place='bottom'
-            >
-              {() => (
-                <button
-                  onClick={headerBrowseButton.handleClick}
-                  className={styles.headerNavigationButton}
-                  aria-label={headerBrowseButton.label}
-                  type="button"
+          {headerBrowseButtons.map((headerBrowseButton) => {
+            if (!headerBrowseButton.isVisible) return null;
+
+            const wrapperClass = headerBrowseButton.hideOnMobile ? 'hidden sm:block' : '';
+
+            return (
+              <div
+                key={`header-${headerBrowseButton.label}-button`}
+                className={wrapperClass}
+              >
+                <Tooltip
+                  identifier={`header-${headerBrowseButton.label}-button`}
+                  content={headerBrowseButton.label}
+                  place='bottom'
                 >
-                  <FontAwesomeIcon
-                    className={styles.headerNavigationButtonIcon}
-                    icon={headerBrowseButton.icon}
-                    aria-hidden="true"
-                  />
-                </button>
-              )}
-            </Tooltip>
-          ))}
+                  {() => (
+                    <button
+                      onClick={headerBrowseButton.handleClick}
+                      className={styles.headerNavigationButton}
+                      aria-label={headerBrowseButton.label}
+                      type="button"
+                    >
+                      <FontAwesomeIcon
+                        className={styles.headerNavigationButtonIcon}
+                        icon={headerBrowseButton.icon}
+                        aria-hidden="true"
+                      />
+                    </button>
+                  )}
+                </Tooltip>
+              </div>
+            );
+          })}
         </div>
 
         {isLoggedIn ? (
@@ -250,12 +263,12 @@ export const Header = () => {
                   onClick={() => setIsSettingsOpen(true)}
                   className={classNames(
                     styles.headerNavigationAddressLogout,
-                    'ml-2 cursor-pointer hover:bg-tertiary transition-colors'
+                    'cursor-pointer hover:bg-tertiary transition-colors'
                   )}
                   aria-label={t('header.settings')}
                   type="button"
                 >
-                  <span className="text-lg" role="img" aria-label="Settings">⚙️</span>
+                  <span className="text-base sm:text-lg" role="img" aria-label="Settings">⚙️</span>
                 </button>
               )}
             </Tooltip>

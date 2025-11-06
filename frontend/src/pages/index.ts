@@ -14,3 +14,5 @@ export { Results } from './Results';
 export { Profile } from './Profile';
 export { AdminDashboard } from './AdminDashboard';
 export { About } from './About/About';
+export { EncryptionOptions } from './EncryptionOptions';
+export { Register } from './Register';

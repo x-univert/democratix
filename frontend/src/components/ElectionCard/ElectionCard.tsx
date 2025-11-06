@@ -3,9 +3,11 @@ import { useGetAccount } from 'lib';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Election } from '../../hooks/elections/useGetElection';
-import { useHasVoted, useElectionMetadata, useIPFSImage } from '../../hooks/elections';
+import { useHasVoted, useHasVotedPrivately, useElectionMetadata, useIPFSImage, useIsCoOrganizer } from '../../hooks/elections';
 import { useIsVoterRegistered } from '../../hooks/transactions/useIsVoterRegistered';
 import { useActivateElection } from '../../hooks/transactions/useActivateElection';
+import { TransactionProgressModal } from '../TransactionProgressModal';
+import { EncryptionTypeBadge } from '../EncryptionTypeBadge';
 import { RouteNamesEnum } from '../../localConstants';
 
 interface ElectionCardProps {
@@ -16,6 +18,7 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
   const navigate = useNavigate();
   const { address } = useGetAccount();
   const { hasVoted: checkHasVoted } = useHasVoted();
+  const hasVotedPrivately = useHasVotedPrivately(election.id);
   const [alreadyVoted, setAlreadyVoted] = useState(false);
   const { t } = useTranslation();
 
@@ -25,10 +28,18 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [checkingRegistration, setCheckingRegistration] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [activationTxHash, setActivationTxHash] = useState<string | undefined>();
 
   // Récupérer les métadonnées IPFS
   const { metadata: electionMetadata } = useElectionMetadata(election.description_ipfs);
   const imageUrl = useIPFSImage(electionMetadata?.image);
+
+  // Vérifier si l'utilisateur est co-organisateur
+  const { isOrganizer: isOrganizerOrCoOrg, isPrimaryOrganizer, isCoOrganizer: isCoOrganizerStatus } = useIsCoOrganizer(
+    election.id,
+    election.organizer
+  );
 
   // Calculer le statut en fonction des dates et du status
   const now = Date.now() / 1000; // Timestamp en secondes
@@ -44,14 +55,18 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
   const shouldClose = (isActive || isPending) && election.end_time < now;
   const canAddCandidates = isPending && election.end_time > now;
 
-  // Vérifier si l'utilisateur a déjà voté (seulement pour les élections actives)
+  // Vérifier si l'utilisateur a déjà voté (standard OU privé)
   useEffect(() => {
     if (isActive && address) {
       checkHasVoted(election.id).then(voted => {
-        setAlreadyVoted(voted);
+        // Combiner vote standard ET vote privé
+        setAlreadyVoted(voted || hasVotedPrivately);
       });
+    } else if (isActive) {
+      // Si pas d'adresse, vérifier seulement le vote privé
+      setAlreadyVoted(hasVotedPrivately);
     }
-  }, [isActive, address, election.id]);
+  }, [isActive, address, election.id, hasVotedPrivately]);
 
   // Vérifier si l'utilisateur est inscrit (pour les élections avec inscription obligatoire)
   useEffect(() => {
@@ -64,9 +79,8 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
     }
   }, [election.requires_registration, election.id, address]);
 
-  // Vérifier si l'utilisateur connecté est l'organisateur
-  const isOrganizer = address && election.organizer &&
-    address.toLowerCase() === election.organizer.toLowerCase();
+  // Vérifier si l'utilisateur connecté est l'organisateur (legacy - pour compatibilité)
+  const isOrganizer = isOrganizerOrCoOrg;
 
   // Déterminer le badge à afficher
   const getBadge = () => {
@@ -133,16 +147,28 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
 
     setIsActivating(true);
     try {
-      await activateElection(election.id);
-      alert(t('electionCard.actions.activationSuccess') || 'Élection activée avec succès !');
-      // Recharger la page pour voir les changements
-      setTimeout(() => window.location.reload(), 2000);
+      const result = await activateElection(election.id);
+      console.log('Activation result:', result);
+
+      // Ouvrir la modal de progression avec le hash de transaction
+      setActivationTxHash(result.transactionHash);
+      setShowActivationModal(true);
     } catch (err) {
       console.error('Erreur lors de l\'activation:', err);
       alert(t('electionCard.actions.activationError') || 'Erreur lors de l\'activation de l\'élection');
-    } finally {
       setIsActivating(false);
     }
+  };
+
+  const handleActivationSuccess = () => {
+    // Recharger la page pour voir les changements
+    setTimeout(() => window.location.reload(), 1000);
+  };
+
+  const handleCloseActivationModal = () => {
+    setShowActivationModal(false);
+    setActivationTxHash(undefined);
+    setIsActivating(false);
   };
 
   const handleVote = (e: React.MouseEvent) => {
@@ -205,9 +231,9 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
           </p>
         )}
 
-        {/* Catégorie */}
-        {electionMetadata?.metadata?.category && (
-          <div className="flex items-center gap-2">
+        {/* Catégorie et Type de chiffrement */}
+        <div className="flex flex-wrap items-center gap-2">
+          {electionMetadata?.metadata?.category && (
             <span className="inline-block px-3 py-1 bg-accent bg-opacity-20 text-accent rounded-full text-xs font-semibold">
               {electionMetadata.metadata.category === 'presidential' && `🏛️ ${t('createElection.form.categories.presidential')}`}
               {electionMetadata.metadata.category === 'legislative' && `📜 ${t('createElection.form.categories.legislative')}`}
@@ -216,8 +242,9 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
               {electionMetadata.metadata.category === 'association' && `🤝 ${t('createElection.form.categories.association')}`}
               {electionMetadata.metadata.category === 'other' && `📋 ${t('createElection.form.categories.other')}`}
             </span>
-          </div>
-        )}
+          )}
+          <EncryptionTypeBadge encryptionType={election.encryption_type} size="small" />
+        </div>
 
         {/* Informations */}
         <div className="flex flex-col gap-2">
@@ -288,9 +315,13 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
 
         {/* Organisateur */}
         <div className="flex items-center gap-2 text-xs pt-3 border-t border-secondary mt-auto">
-          {isOrganizer ? (
-            <span className="text-accent font-medium">
+          {isPrimaryOrganizer ? (
+            <span className="px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/30 dark:to-yellow-900/30 border-2 border-amber-500 rounded-lg text-amber-800 dark:text-amber-200 font-bold">
               {t('electionCard.youAreOrganizer')}
+            </span>
+          ) : isCoOrganizerStatus ? (
+            <span className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30 border-2 border-purple-500 rounded-lg text-purple-800 dark:text-purple-200 font-bold">
+              {t('electionCard.youAreCoOrganizer') || 'Vous êtes co-organisateur'}
             </span>
           ) : (
             <>
@@ -306,7 +337,7 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
       {/* Action buttons */}
       <div className="p-4 pt-0 border-t border-secondary bg-primary flex flex-col gap-2">
         {/* Boutons pour l'organisateur - Élection en attente non expirée */}
-        {isOrganizer && canAddCandidates && (
+        {isOrganizerOrCoOrg && canAddCandidates && (
           <>
             <div className="flex gap-2 w-full">
               <button
@@ -315,7 +346,8 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
               >
                 {t('electionCard.actions.addCandidates')}
               </button>
-              {canActivate && (
+              {/* Activate button - Primary organizer only */}
+              {isPrimaryOrganizer && canActivate && (
                 <button
                   className="flex-1 bg-btn-primary text-btn-primary px-4 py-2 rounded-lg hover:bg-btn-hover transition-colors font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleActivate}
@@ -335,8 +367,8 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
           </>
         )}
 
-        {/* Bouton pour l'organisateur - Élection expirée (Pending ou Active) */}
-        {isOrganizer && shouldClose && (
+        {/* Bouton pour l'organisateur PRINCIPAL UNIQUEMENT - Élection expirée (Pending ou Active) */}
+        {isPrimaryOrganizer && shouldClose && (
           <div className="w-full space-y-2">
             <div className="text-xs text-center px-2 py-1 bg-orange-500 bg-opacity-20 border border-orange-500 rounded text-primary font-bold">
               {t('electionCard.actions.expiredWarning')}
@@ -350,8 +382,8 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
           </div>
         )}
 
-        {/* Bouton pour l'organisateur - Élection fermée (à finaliser) */}
-        {isOrganizer && isClosed && !isFinalized && (
+        {/* Bouton pour l'organisateur PRINCIPAL UNIQUEMENT - Élection fermée (à finaliser) */}
+        {isPrimaryOrganizer && isClosed && !isFinalized && (
           <div className="w-full space-y-2">
             <div className="text-xs text-center px-2 py-1 bg-accent bg-opacity-10 border-2 border-accent rounded">
               <span className="text-accent font-bold">ℹ️ {t('electionCard.actions.needsFinalization')}</span>
@@ -388,7 +420,7 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
               </>
             )}
             {/* Bouton "Voir les détails" seulement pour les non-organisateurs (l'organisateur a déjà ce bouton dans sa section) */}
-            {!isOrganizer && (
+            {!isOrganizerOrCoOrg && (
               <button
                 className="w-full px-6 py-2 bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-colors font-semibold text-sm"
                 onClick={handleViewDetails}
@@ -430,7 +462,7 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
         )}
 
         {/* Bouton détails par défaut */}
-        {!isActive && (!isOrganizer || !isPending) && !shouldClose && !(isPending && election.requires_registration) && (
+        {!isActive && (!isOrganizerOrCoOrg || !isPending) && !shouldClose && !(isPending && election.requires_registration) && (
           <button
             className="w-full px-6 py-2 bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-colors font-semibold text-sm btn-results"
             onClick={handleViewDetails}
@@ -439,8 +471,8 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
           </button>
         )}
 
-        {/* Bouton détails pour élections expirées (non-organisateur) */}
-        {isActive && shouldClose && !isOrganizer && (
+        {/* Bouton détails pour élections expirées (non-organisateur principal) */}
+        {isActive && shouldClose && !isPrimaryOrganizer && (
           <button
             className="w-full px-6 py-2 bg-secondary text-accent border-2 border-accent rounded-lg hover:bg-tertiary transition-colors font-semibold text-sm btn-results"
             onClick={handleViewDetails}
@@ -449,6 +481,15 @@ export const ElectionCard = ({ election }: ElectionCardProps) => {
           </button>
         )}
       </div>
+
+      {/* Modal de progression de l'activation */}
+      <TransactionProgressModal
+        isOpen={showActivationModal}
+        transactionHash={activationTxHash}
+        title={t('electionDetail.activating') || 'Activation en cours'}
+        onClose={handleCloseActivationModal}
+        onSuccess={handleActivationSuccess}
+      />
     </div>
   );
 };

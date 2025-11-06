@@ -1,6 +1,6 @@
 import { votingContract } from 'config';
 import votingAbi from 'contracts/voting.abi.json';
-import { signAndSendTransactions } from 'helpers';
+import { signAndSendTransactionsWithHash } from 'helpers';
 import {
   AbiRegistry,
   Address,
@@ -11,9 +11,9 @@ import {
 } from 'lib';
 
 const CLOSE_ELECTION_INFO = {
-  processingMessage: 'Fermeture de l\'élection en cours...',
-  errorMessage: 'Erreur lors de la fermeture de l\'élection',
-  successMessage: 'Élection fermée avec succès!'
+  processingMessage: 'Fermeture de l\'Ã©lection en cours...',
+  errorMessage: 'Erreur lors de la fermeture de l\'Ã©lection',
+  successMessage: 'Ã‰lection fermÃ©e avec succÃ¨s!'
 };
 
 export const useCloseElection = () => {
@@ -22,7 +22,7 @@ export const useCloseElection = () => {
 
   const closeElection = async (electionId: number) => {
     try {
-      // 1. Créer la factory avec l'ABI
+      // 1. CrÃ©er la factory avec l'ABI
       const abi = AbiRegistry.create(votingAbi);
       const scFactory = new SmartContractTransactionsFactory({
         config: new TransactionsFactoryConfig({
@@ -31,7 +31,7 @@ export const useCloseElection = () => {
         abi
       });
 
-      // 2. Créer la transaction
+      // 2. CrÃ©er la transaction
       const transaction = await scFactory.createTransactionForExecute(
         new Address(address),
         {
@@ -42,13 +42,16 @@ export const useCloseElection = () => {
         }
       );
 
-      // 3. Signer et envoyer
-      const sessionId = await signAndSendTransactions({
+      // 3. Signer et envoyer avec hash de transaction
+      const result = await signAndSendTransactionsWithHash({
         transactions: [transaction],
         transactionsDisplayInfo: CLOSE_ELECTION_INFO
       });
 
-      return sessionId;
+      return {
+        sessionId: result.sessionId,
+        transactionHash: result.transactionHashes[0]
+      };
     } catch (err) {
       console.error('Error closing election:', err);
       throw err;

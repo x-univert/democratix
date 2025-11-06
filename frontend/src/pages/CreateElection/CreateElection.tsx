@@ -6,7 +6,7 @@ import { useCreateElection } from 'hooks/transactions';
 import { useAddCandidate } from 'hooks/transactions';
 import { ipfsService, type ElectionMetadata, type CandidateMetadata } from '../../services/ipfsService';
 import { useGetAccount, useGetNetworkConfig } from 'lib';
-import { ConfirmModal } from 'components';
+import { ConfirmModal, SetupElGamalModal } from 'components';
 import { ProgressTracker } from 'components/ProgressTracker';
 import { votingContract } from 'config';
 
@@ -45,6 +45,8 @@ export const CreateElection = () => {
   const [endDate, setEndDate] = useState('');
   const [requiresRegistration, setRequiresRegistration] = useState(false);
   const [registrationDeadline, setRegistrationDeadline] = useState('');
+  const [encryptionType, setEncryptionType] = useState<0 | 1 | 2>(0);
+  const [enableElGamalEncryption, setEnableElGamalEncryption] = useState(false);
 
   // Remplacer le tableau simple par des données complètes
   const [candidates, setCandidates] = useState<CandidateFormData[]>([
@@ -58,6 +60,8 @@ export const CreateElection = () => {
   const [expandedCandidate, setExpandedCandidate] = useState<number | null>(null);
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([]);
   const [showProgress, setShowProgress] = useState(false);
+  const [showElGamalModal, setShowElGamalModal] = useState(false);
+  const [createdElectionId, setCreatedElectionId] = useState<number | null>(null);
 
   const handleAddCandidate = () => {
     setCandidates([
@@ -241,10 +245,10 @@ export const CreateElection = () => {
         ipfsHash = await ipfsService.uploadElectionMetadata(metadata);
         console.log('Métadonnées uploadées sur IPFS:', ipfsHash);
 
-        updateStep('upload-ipfs', 'completed', `IPFS Hash: ${ipfsHash}`);
+        updateStep('upload-ipfs', 'completed', t('createElection.progress.ipfsHashResult', { hash: ipfsHash }));
       } catch (ipfsError) {
         console.error('Erreur lors de l\'upload IPFS:', ipfsError);
-        updateStep('upload-ipfs', 'error', 'Failed to upload to IPFS');
+        updateStep('upload-ipfs', 'error', t('createElection.progress.uploadFailed'));
         alert(t('createElection.errors.ipfsUpload') || 'Erreur lors de l\'upload sur IPFS. Vérifiez votre connexion internet.');
         setIsSubmitting(false);
         setUploadingToIPFS(false);
@@ -268,10 +272,11 @@ export const CreateElection = () => {
         startTimestamp,
         endTimestamp,
         requiresRegistration,
+        encryptionType,
         deadlineTimestamp
       );
 
-      updateStep('create-election', 'completed', `TX: ${result.transactionHash?.substring(0, 10)}...`);
+      updateStep('create-election', 'completed', t('createElection.progress.txHashResult', { hash: result.transactionHash?.substring(0, 10) + '...' }));
 
       console.log('Transaction result:', result);
 
@@ -305,7 +310,7 @@ export const CreateElection = () => {
 
           txData = await txResponse.json();
           console.log(`Tentative ${retries + 1}/${maxRetries} - Status:`, txData.status);
-          updateStep('confirm-election', 'in_progress', `Attempt ${retries + 1}/${maxRetries} - Status: ${txData.status}`);
+          updateStep('confirm-election', 'in_progress', t('createElection.progress.attemptStatus', { attempt: retries + 1, max: maxRetries, status: txData.status }));
 
           // Vérifier si la transaction est exécutée (success ou fail)
           if (txData.status === 'success' || txData.status === 'executed') {
@@ -327,7 +332,7 @@ export const CreateElection = () => {
           throw new Error('Transaction timeout - not executed after 30 seconds');
         }
 
-        updateStep('confirm-election', 'completed', 'Transaction confirmed');
+        updateStep('confirm-election', 'completed', t('createElection.progress.transactionConfirmed'));
 
         // L'ID de l'élection est dans les events (logs), pas dans results
         // Chercher l'event "createElection" ou "electionCreated"
@@ -384,7 +389,7 @@ export const CreateElection = () => {
         const stepId = `add-candidate-${i}`;
 
         try {
-          updateStep(stepId, 'in_progress', 'Uploading to IPFS...');
+          updateStep(stepId, 'in_progress', t('createElection.progress.uploadingToIPFS'));
 
           // Upload image candidate sur IPFS (si présente)
           let candidateImageIPFS: string | undefined;
@@ -413,31 +418,45 @@ export const CreateElection = () => {
           const candidateIpfsHash = await ipfsService.uploadCandidateMetadata(candidateMetadata);
           console.log(`Métadonnées candidat ${i + 1} uploadées:`, candidateIpfsHash);
 
-          updateStep(stepId, 'in_progress', 'Adding to blockchain...');
+          updateStep(stepId, 'in_progress', t('createElection.progress.addingToBlockchain'));
 
           // Ajouter le candidat à l'élection
           console.log(`Ajout candidat ${i + 1} à l'élection #${nextElectionId}...`);
           await addCandidate(nextElectionId, i, candidate.name, candidateIpfsHash);
           console.log(`Candidat ${i + 1} ajouté avec succès à l'élection #${nextElectionId}!`);
 
-          updateStep(stepId, 'completed', 'Successfully added');
+          updateStep(stepId, 'completed', t('createElection.progress.successfullyAdded'));
 
           // Attendre un peu entre chaque ajout de candidat (6 secondes pour confirmation)
           await new Promise(resolve => setTimeout(resolve, 7000));
         } catch (candidateError) {
           console.error(`Erreur lors de l'ajout du candidat ${i + 1}:`, candidateError);
-          updateStep(stepId, 'error', 'Failed to add candidate');
+          updateStep(stepId, 'error', t('createElection.progress.failedToAdd'));
           alert(`Attention: Le candidat "${candidate.name}" n'a pas pu être ajouté. Vous devrez l'ajouter manuellement.`);
         }
       }
 
         console.log(`Élection #${nextElectionId} créée avec succès avec tous ses candidats!`);
-        // Rediriger vers la liste des élections
-        navigate(RouteNamesEnum.elections);
+
+        // Si ElGamal est activé, ouvrir la modal de setup
+        if (enableElGamalEncryption) {
+          setCreatedElectionId(nextElectionId);
+          setShowElGamalModal(true);
+        } else {
+          // Sinon rediriger directement vers la liste des élections
+          navigate(RouteNamesEnum.elections);
+        }
       } catch (candidatesError) {
         console.error('Erreur lors de l\'ajout des candidats:', candidatesError);
         alert(`Élection #${nextElectionId} créée, mais impossible d\'ajouter automatiquement les candidats. Veuillez les ajouter manuellement depuis la page de détails de l\'élection.`);
-        navigate(RouteNamesEnum.elections);
+
+        // Si ElGamal activé, proposer quand même la configuration
+        if (enableElGamalEncryption) {
+          setCreatedElectionId(nextElectionId);
+          setShowElGamalModal(true);
+        } else {
+          navigate(RouteNamesEnum.elections);
+        }
       }
     } catch (error) {
       console.error('Erreur lors de la création de l\'élection:', error);
@@ -448,24 +467,24 @@ export const CreateElection = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-8 max-w-3xl">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <button
           onClick={() => navigate(RouteNamesEnum.elections)}
-          className="text-accent hover:text-link mb-4"
+          className="text-accent hover:text-link mb-4 text-sm sm:text-base"
         >
           ← {t('electionDetail.backToElections')}
         </button>
 
-        <h1 className="text-4xl font-bold mb-2 text-primary">{t('createElection.title')}</h1>
-        <p className="text-secondary">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-primary">{t('createElection.title')}</h1>
+        <p className="text-sm sm:text-base text-secondary">
           {t('createElection.subtitle') || 'Remplissez les informations pour créer une nouvelle élection'}
         </p>
       </div>
 
       {/* Formulaire */}
-      <form onSubmit={handleSubmit} className="bg-secondary rounded-lg shadow-md p-8 border-2 border-secondary vibe-border">
+      <form onSubmit={handleSubmit} className="bg-secondary rounded-lg shadow-md p-4 sm:p-6 lg:p-8 border-2 border-secondary vibe-border">
         {/* Titre */}
         <div className="mb-6">
           <label className="block text-sm font-medium mb-2 text-primary">
@@ -501,20 +520,20 @@ export const CreateElection = () => {
           <label className="block text-sm font-medium mb-2 text-primary">
             {t('createElection.form.image')}
           </label>
-          <div className="flex items-start gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <div className="flex-1 w-full">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleImageChange}
-                className="w-full p-3 border border-secondary bg-primary text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-accent file:text-white file:cursor-pointer hover:file:bg-accent-hover"
+                className="w-full p-2 sm:p-3 text-sm border border-secondary bg-primary text-primary rounded-lg focus:outline-none focus:ring-2 focus:ring-accent file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-lg file:border-0 file:bg-accent file:text-white file:cursor-pointer hover:file:bg-accent-hover file:text-xs sm:file:text-sm"
               />
               <p className="text-xs text-secondary mt-1">
                 {t('createElection.form.imageHint')}
               </p>
             </div>
             {imagePreview && (
-              <div className="relative w-32 h-32 border-2 border-accent rounded-lg overflow-hidden">
+              <div className="relative w-24 h-24 sm:w-32 sm:h-32 border-2 border-accent rounded-lg overflow-hidden">
                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                 <button
                   type="button"
@@ -625,6 +644,160 @@ export const CreateElection = () => {
             </p>
           </div>
         )}
+
+        {/* Sélection du Type de Chiffrement */}
+        <div className="mb-6 border-2 border-accent rounded-lg p-4 sm:p-6 bg-accent bg-opacity-5">
+          <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2 text-primary">
+            <span>🔐</span>
+            {t('createElection.encryption.title', 'Type de Chiffrement des Votes')}
+          </h3>
+          <p className="text-xs sm:text-sm text-secondary mb-4">
+            {t('createElection.encryption.subtitle', 'Choisissez le niveau de confidentialité et de sécurité pour le vote')}
+          </p>
+
+          <div className="space-y-3">
+            {/* Option 0: Pas de chiffrement */}
+            <label className={`flex items-start gap-2 sm:gap-3 cursor-pointer p-3 sm:p-4 rounded-lg border-2 transition-all ${
+              encryptionType === 0
+                ? 'border-accent bg-accent bg-opacity-10'
+                : 'border-secondary hover:border-accent'
+            }`}>
+              <input
+                type="radio"
+                name="encryption"
+                value="0"
+                checked={encryptionType === 0}
+                onChange={() => setEncryptionType(0)}
+                className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base sm:text-lg text-primary">
+                  {t('createElection.encryption.option0.title', 'Aucun chiffrement (Standard)')}
+                </div>
+                <p className="text-xs sm:text-sm text-secondary mt-1">
+                  {t('createElection.encryption.option0.description', 'Votes publics, résultats visibles en temps réel. Idéal pour sondages et votes transparents.')}
+                </p>
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 text-xs text-secondary">
+                  <span>⚡ {t('createElection.encryption.option0.speed', 'Rapide (~1s)')}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>💰 {t('createElection.encryption.option0.gas', 'Gas: ~5M')}</span>
+                </div>
+              </div>
+            </label>
+
+            {/* Option 1: ElGamal */}
+            <label className={`flex items-start gap-2 sm:gap-3 cursor-pointer p-3 sm:p-4 rounded-lg border-2 transition-all ${
+              encryptionType === 1
+                ? 'border-green-500 bg-green-500 bg-opacity-10'
+                : 'border-secondary hover:border-green-500'
+            }`}>
+              <input
+                type="radio"
+                name="encryption"
+                value="1"
+                checked={encryptionType === 1}
+                onChange={() => {
+                  setEncryptionType(1);
+                  setEnableElGamalEncryption(true);
+                }}
+                className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base sm:text-lg flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-primary">
+                  <span>{t('createElection.encryption.option1.title', '🔐 Option 1: ElGamal')}</span>
+                  <span className="text-xs px-2 py-0.5 sm:py-1 bg-green-500 text-white rounded-full font-medium w-fit">
+                    {t('createElection.encryption.option1.badge', 'RECOMMANDÉ')}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-secondary mt-1">
+                  {t('createElection.encryption.option1.description', 'Vote chiffré avec déchiffrement après clôture. Confidentialité + comptage des résultats.')}
+                </p>
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 text-xs text-secondary">
+                  <span>⚡ {t('createElection.encryption.option1.speed', 'Rapide (~1s)')}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>💰 {t('createElection.encryption.option1.gas', 'Gas: ~10M')}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>✓ {t('createElection.encryption.option1.feature1', 'Comptage possible')}</span>
+                </div>
+              </div>
+            </label>
+
+            {/* Option 2: ElGamal + zk-SNARK */}
+            <label className={`flex items-start gap-2 sm:gap-3 cursor-pointer p-3 sm:p-4 rounded-lg border-2 transition-all ${
+              encryptionType === 2
+                ? 'border-purple-500 bg-purple-500 bg-opacity-10'
+                : 'border-secondary hover:border-purple-500'
+            }`}>
+              <input
+                type="radio"
+                name="encryption"
+                value="2"
+                checked={encryptionType === 2}
+                onChange={() => {
+                  setEncryptionType(2);
+                  setEnableElGamalEncryption(true);
+                }}
+                className="mt-0.5 sm:mt-1 w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-base sm:text-lg flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-primary">
+                  <span>{t('createElection.encryption.option2.title', '🛡️ Option 2: ElGamal + zk-SNARK')}</span>
+                  <span className="text-xs px-2 py-0.5 sm:py-1 bg-yellow-500 text-black rounded-full font-medium w-fit">
+                    {t('createElection.encryption.option2.badge', 'SÉCURITÉ MAX')}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-secondary mt-1">
+                  {t('createElection.encryption.option2.description', 'Chiffrement + preuve mathématique de validité. Anonymat total avec nullifier.')}
+                </p>
+                <div className="flex flex-wrap gap-1 sm:gap-2 mt-2 text-xs text-secondary">
+                  <span>⏱️ {t('createElection.encryption.option2.speed', 'Plus lent (~3-4s)')}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>💰 {t('createElection.encryption.option2.gas', 'Gas: ~50M')}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>✓ {t('createElection.encryption.option2.feature1', 'Preuve validité')}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span>✓ {t('createElection.encryption.option2.feature2', 'Anonymat total')}</span>
+                </div>
+              </div>
+            </label>
+          </div>
+
+          {/* Info supplémentaires si ElGamal activé */}
+          {(encryptionType === 1 || encryptionType === 2) && (
+            <div className="mt-4 p-4 bg-primary bg-opacity-10 border border-accent rounded-lg">
+              <p className="text-xs text-primary font-medium mb-2">
+                ℹ️ {t('createElection.encryption.info.title', 'Informations importantes')}:
+              </p>
+              <ul className="text-xs text-secondary space-y-1 list-disc list-inside">
+                <li>{t('createElection.encryption.info.item1', 'Une paire de clés ElGamal sera générée automatiquement')}</li>
+                <li>{t('createElection.encryption.info.item2', 'Vous recevrez une clé privée à conserver précieusement')}</li>
+                <li>{t('createElection.encryption.info.item3', 'Seul vous pourrez déchiffrer les votes après la clôture')}</li>
+                <li>{t('createElection.encryption.info.item4', 'Les électeurs pourront choisir entre vote standard et vote privé')}</li>
+              </ul>
+              <a
+                href="/encryption-options"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-accent hover:underline mt-3"
+              >
+                📚 {t('createElection.encryption.info.learnMore', 'En savoir plus sur les options de chiffrement')}
+                <span>→</span>
+              </a>
+            </div>
+          )}
+
+          {/* Lien vers page de comparaison */}
+          <div className="mt-4 text-center">
+            <a
+              href="/encryption-options"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline text-sm font-medium"
+            >
+              ℹ️ {t('createElection.encryption.compareLink', 'Comparer les options en détail')} →
+            </a>
+          </div>
+        </div>
 
         {/* Candidats - Formulaire complet */}
         <div className="mb-6">
@@ -783,7 +956,7 @@ export const CreateElection = () => {
           <button
             type="button"
             onClick={handleAddCandidate}
-            className="mt-4 px-4 py-2 text-accent border-2 border-accent rounded-lg hover:bg-accent hover:text-white transition-colors"
+            className="mt-4 w-full sm:w-auto px-4 py-2.5 text-sm sm:text-base text-accent border-2 border-accent rounded-lg hover:bg-accent hover:text-white transition-colors touch-manipulation"
             disabled={isSubmitting}
           >
             + {t('createElection.form.addCandidate')}
@@ -791,19 +964,19 @@ export const CreateElection = () => {
         </div>
 
         {/* Boutons */}
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <button
             type="button"
             onClick={() => navigate(RouteNamesEnum.elections)}
             disabled={isSubmitting}
-            className="flex-1 px-6 py-3 border border-secondary text-secondary rounded-lg hover:bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 sm:px-6 py-3 text-sm sm:text-base border border-secondary text-secondary rounded-lg hover:bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t('createElection.form.cancel')}
           </button>
           <button
             type="submit"
             disabled={isSubmitting || uploadingToIPFS}
-            className="flex-1 bg-btn-primary text-btn-primary px-6 py-3 rounded-lg hover:bg-btn-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 bg-btn-primary text-btn-primary px-4 sm:px-6 py-3 rounded-lg hover:bg-btn-hover transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base"
           >
             {uploadingToIPFS && (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -834,10 +1007,12 @@ export const CreateElection = () => {
         )}
       </form>
 
-      {/* Progress Tracker */}
+      {/* Progress Tracker Modal */}
       {showProgress && progressSteps.length > 0 && (
-        <div className="mt-8">
-          <ProgressTracker steps={progressSteps} />
+        <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4 animate-fadeIn">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <ProgressTracker steps={progressSteps} />
+          </div>
         </div>
       )}
 
@@ -852,6 +1027,21 @@ export const CreateElection = () => {
         cancelText={t('createElection.confirmModal.cancel')}
         type="info"
       />
+
+      {/* Modal de setup ElGamal */}
+      {createdElectionId !== null && (
+        <SetupElGamalModal
+          isOpen={showElGamalModal}
+          onClose={() => {
+            setShowElGamalModal(false);
+            navigate(RouteNamesEnum.elections);
+          }}
+          electionId={createdElectionId}
+          onSuccess={() => {
+            console.log('ElGamal encryption setup successfully');
+          }}
+        />
+      )}
     </div>
   );
 };

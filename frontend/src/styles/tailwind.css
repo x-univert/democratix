@@ -248,6 +248,22 @@
   animation: fadeIn 0.2s ease-out;
 }
 
+/* Animation pour scale-in (succès/erreur) */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out;
+}
+
 /* ========================================
    ANIMATIONS UI/UX IMPROVEMENTS
    ======================================== */
@@ -410,4 +426,135 @@
 
 [data-mvx-theme='mvx:light-theme'] label {
   color: var(--mvx-text-color-primary) !important;
+}
+
+/* Fix file input button text color on BrightLight theme */
+[data-mvx-theme='mvx:light-theme'] input[type="file"]::file-selector-button {
+  color: #ffffff !important;
+  background-color: var(--mvx-button-bg-primary) !important;
+}
+
+/* Ensure file button styling works across browsers */
+[data-mvx-theme='mvx:light-theme'] input[type="file"]::-webkit-file-upload-button {
+  color: #ffffff !important;
+  background-color: var(--mvx-button-bg-primary) !important;
+}
+
+/* Vote page - Candidat sélectionné - liens en noir pour TealLab et VibeMode */
+[data-mvx-theme='mvx:dark-theme'] .candidate-link-selected {
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .candidate-link-selected {
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+/* BrightLight - liens en blanc (par défaut) */
+[data-mvx-theme='mvx:light-theme'] .candidate-link-selected {
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+}
+
+/* Vote page - Candidat sélectionné - biographie en noir pour TealLab et VibeMode */
+[data-mvx-theme='mvx:dark-theme'] .candidate-bio-selected {
+  color: #000000 !important;
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .candidate-bio-selected {
+  color: #000000 !important;
+}
+
+/* BrightLight - biographie en blanc */
+[data-mvx-theme='mvx:light-theme'] .candidate-bio-selected {
+  color: #ffffff !important;
+}
+
+/* Vote page - Texte d'avertissement */
+/* TealLab et VibeMode - texte blanc */
+[data-mvx-theme='mvx:dark-theme'] .vote-warning-text {
+  color: #ffffff !important;
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .vote-warning-text {
+  color: #ffffff !important;
+}
+
+/* BrightLight - texte noir */
+[data-mvx-theme='mvx:light-theme'] .vote-warning-text {
+  color: #000000 !important;
+}
+
+/* Vote page - Boutons de vote désactivés (quand aucun candidat sélectionné) */
+/* TealLab - texte noir */
+[data-mvx-theme='mvx:dark-theme'] .vote-button-disabled {
+  color: #000000 !important;
+}
+
+/* VibeMode - texte noir */
+[data-mvx-theme='mvx:vibe-theme'] .vote-button-disabled {
+  color: #000000 !important;
+}
+
+/* BrightLight - texte blanc */
+[data-mvx-theme='mvx:light-theme'] .vote-button-disabled {
+  color: #ffffff !important;
+}
+
+/* Private Vote Modal - Texte des modales de vote privé */
+/* TealLab et VibeMode - texte blanc */
+[data-mvx-theme='mvx:dark-theme'] .private-vote-modal-text {
+  color: #ffffff !important;
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .private-vote-modal-text {
+  color: #ffffff !important;
+}
+
+/* BrightLight - texte noir */
+[data-mvx-theme='mvx:light-theme'] .private-vote-modal-text {
+  color: #000000 !important;
+}
+
+/* Private Vote Modal - Bouton */
+/* TealLab et VibeMode - texte blanc */
+[data-mvx-theme='mvx:dark-theme'] .private-vote-modal-button {
+  color: #ffffff !important;
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .private-vote-modal-button {
+  color: #ffffff !important;
+}
+
+/* BrightLight - texte noir */
+[data-mvx-theme='mvx:light-theme'] .private-vote-modal-button {
+  color: #000000 !important;
+}
+
+/* Election Detail - Badges de statut */
+/* TealLab et VibeMode - texte noir pour En cours, En attente */
+[data-mvx-theme='mvx:dark-theme'] .election-status-badge {
+  color: #000000 !important;
+}
+
+[data-mvx-theme='mvx:vibe-theme'] .election-status-badge {
+  color: #000000 !important;
+}
+
+/* BrightLight - texte selon le badge */
+[data-mvx-theme='mvx:light-theme'] .election-status-badge {
+  /* Par défaut noir pour En cours, En attente */
+  color: #000000 !important;
+}
+
+/* Exception pour le badge "Fermée" en BrightLight - texte blanc */
+[data-mvx-theme='mvx:light-theme'] .bg-tertiary.election-status-badge {
+  color: #ffffff !important;
+}
+
+/* Election Detail - Texte section temps restant/progression */
+/* Texte noir pour tous les thèmes */
+.election-time-text {
+  color: #000000 !important;
 }

@@ -1,0 +1,1 @@
+export { SetupElGamalModal } from './SetupElGamalModal';

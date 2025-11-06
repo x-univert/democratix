@@ -55,8 +55,8 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, current
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg">
-      <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">
+    <div className="w-full bg-gradient-to-br from-primary via-secondary to-primary border-2 border-accent vibe-border rounded-2xl p-8 shadow-2xl">
+      <h3 className="text-2xl font-bold mb-6 text-primary">
         {t('createElection.progressTitle', 'Creation Progress')}
       </h3>
 
@@ -67,7 +67,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, current
             {index < steps.length - 1 && (
               <div
                 className={`absolute left-3 top-10 w-0.5 h-8 ${
-                  step.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
+                  step.status === 'completed' ? 'bg-success' : 'bg-secondary'
                 }`}
               />
             )}
@@ -82,18 +82,18 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, current
               {/* Contenu */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-gray-900 dark:text-white">
+                  <h4 className="font-semibold text-primary">
                     {step.label}
                   </h4>
                   {step.status === 'in_progress' && (
-                    <span className="text-sm text-blue-600 dark:text-blue-400 animate-pulse">
+                    <span className="text-sm text-accent animate-pulse">
                       {t('common.inProgress', 'In progress...')}
                     </span>
                   )}
                 </div>
 
                 {step.message && (
-                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  <p className="mt-1 text-sm text-secondary">
                     {step.message}
                   </p>
                 )}
@@ -105,15 +105,15 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, current
 
       {/* Barre de progression globale */}
       <div className="mt-6">
-        <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
-          <span>{t('common.progress', 'Progress')}</span>
-          <span>
+        <div className="flex justify-between text-sm text-secondary mb-2">
+          <span className="font-semibold">{t('common.progress', 'Progress')}</span>
+          <span className="font-bold text-accent">
             {steps.filter(s => s.status === 'completed').length} / {steps.length}
           </span>
         </div>
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+        <div className="w-full bg-secondary border-2 border-secondary vibe-border rounded-full h-3 overflow-hidden shadow-inner">
           <div
-            className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-500 ease-out"
+            className="h-full bg-gradient-to-r from-success to-accent transition-all duration-500 ease-out shadow-md"
             style={{
               width: `${(steps.filter(s => s.status === 'completed').length / steps.length) * 100}%`
             }}

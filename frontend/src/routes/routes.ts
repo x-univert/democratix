@@ -12,7 +12,9 @@ import {
   Results,
   Profile,
   AdminDashboard,
-  About
+  About,
+  EncryptionOptions,
+  Register
 } from 'pages';
 import { RouteType } from 'types';
 
@@ -93,6 +95,16 @@ export const routes: RouteWithTitleType[] = [
     path: RouteNamesEnum.about,
     title: 'About',
     component: About
+  },
+  {
+    path: RouteNamesEnum.encryptionOptions,
+    title: 'Options de Chiffrement',
+    component: EncryptionOptions
+  },
+  {
+    path: RouteNamesEnum.register,
+    title: 'Inscription via QR Code',
+    component: Register
   },
   {
     path: RouteNamesEnum.disclaimer,

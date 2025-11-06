@@ -19,7 +19,8 @@ export interface Election {
   total_votes: number;
   requires_registration: boolean;
   registered_voters_count: number;
-  registration_deadline?: number | null; // NOUVEAU: Date limite d'inscription (optionnel)
+  registration_deadline?: number | null; // Date limite d'inscription (optionnel)
+  encryption_type?: number; // Type de chiffrement: 0=none, 1=elgamal, 2=elgamal+zksnark
 }
 
 export const useGetElection = () => {
@@ -95,7 +96,17 @@ function bytesToNumber(bytes: number[]): number {
 }
 
 function bytesToString(bytes: number[]): string {
-  return String.fromCharCode(...bytes);
+  // Use TextDecoder to properly decode UTF-8 encoded strings
+  // This fixes encoding issues with accented characters (é, è, à, etc.)
+  try {
+    const uint8Array = new Uint8Array(bytes);
+    const decoder = new TextDecoder('utf-8');
+    return decoder.decode(uint8Array);
+  } catch (err) {
+    console.error('Error decoding UTF-8 string:', err);
+    // Fallback to String.fromCharCode (may have encoding issues)
+    return String.fromCharCode(...bytes);
+  }
 }
 
 function bech32Encode(bytes: number[]): string {
@@ -247,6 +258,7 @@ function decodeElection(hex: string, defaultId: number): Election {
     let requires_registration = false;
     let registered_voters_count = 0;
     let registration_deadline: number | null = null;
+    let encryption_type = 0; // Par défaut: pas de chiffrement
 
     // Vérifier s'il reste des bytes à lire (nouvelle structure)
     if (offset < bytes.length) {
@@ -270,6 +282,12 @@ function decodeElection(hex: string, defaultId: number): Election {
           offset += 8;
         }
       }
+
+      // Encryption type (u8 - 1 byte) - NOUVEAU
+      if (offset < bytes.length) {
+        encryption_type = bytes[offset];
+        offset += 1;
+      }
     }
 
     return {
@@ -284,7 +302,8 @@ function decodeElection(hex: string, defaultId: number): Election {
       total_votes,
       requires_registration,
       registered_voters_count,
-      registration_deadline
+      registration_deadline,
+      encryption_type
     };
   } catch (err) {
     console.error('Error decoding election:', err);
@@ -300,7 +319,8 @@ function decodeElection(hex: string, defaultId: number): Election {
       total_votes: 0,
       requires_registration: false,
       registered_voters_count: 0,
-      registration_deadline: null
+      registration_deadline: null,
+      encryption_type: 0
     };
   }
 }

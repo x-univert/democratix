@@ -44,6 +44,7 @@
                 "* `start_time` - Timestamp de début",
                 "* `end_time` - Timestamp de fin",
                 "* `requires_registration` - Inscription obligatoire ou non",
+                "* `encryption_type` - Type de chiffrement: 0=none, 1=elgamal, 2=elgamal+zksnark",
                 "* `registration_deadline` - Date limite d'inscription (optionnel)"
             ],
             "name": "createElection",
@@ -68,6 +69,10 @@
                 {
                     "name": "requires_registration",
                     "type": "bool"
+                },
+                {
+                    "name": "encryption_type",
+                    "type": "u8"
                 },
                 {
                     "name": "registration_deadline",
@@ -159,7 +164,8 @@
                 "",
                 "# Arguments",
                 "* `election_id` - ID de l'élection",
-                "* `count` - Nombre de codes à générer"
+                "* `count` - Nombre de codes à générer",
+                "* `batch_offset` - Offset de départ pour éviter les doublons entre batches (0 pour le premier batch, 100 pour le deuxième, etc.)"
             ],
             "name": "generateInvitationCodes",
             "mutability": "mutable",
@@ -170,6 +176,10 @@
                 },
                 {
                     "name": "count",
+                    "type": "u32"
+                },
+                {
+                    "name": "batch_offset",
                     "type": "u32"
                 }
             ],
@@ -265,6 +275,256 @@
                 }
             ],
             "outputs": []
+        },
+        {
+            "docs": [
+                "Définit la clé publique ElGamal pour une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `public_key` - Clé publique ElGamal (hex string de la clé secp256k1)",
+                "",
+                "# Sécurité",
+                "- Seul l'organisateur peut définir la clé publique",
+                "- La clé doit être définie avant l'activation de l'élection"
+            ],
+            "name": "setElectionPublicKey",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "public_key",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Récupère la clé publique ElGamal d'une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "",
+                "# Returns",
+                "La clé publique ElGamal (hex string) ou buffer vide si non définie"
+            ],
+            "name": "getElectionPublicKey",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Soumet un vote chiffré avec ElGamal (Option 1)",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `c1` - Composante 1 du chiffrement ElGamal (r × G)",
+                "* `c2` - Composante 2 du chiffrement ElGamal (r × pk + m × G)",
+                "",
+                "# Sécurité",
+                "- Le vote est chiffré côté client avec la clé publique",
+                "- Seul l'organisateur peut déchiffrer avec sa clé privée (off-chain)",
+                "- Le smart contract empêche le double vote"
+            ],
+            "name": "submitEncryptedVote",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "c1",
+                    "type": "bytes"
+                },
+                {
+                    "name": "c2",
+                    "type": "bytes"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "**OPTION 2: VOTE PRIVÉ CHIFFRÉ AVEC PREUVE ZK-SNARK**",
+                "",
+                "Soumet un vote privé chiffré ElGamal avec une preuve zk-SNARK Groth16",
+                "prouvant que le vote est valide SANS révéler le choix du candidat.",
+                "",
+                "Cette méthode offre la SÉCURITÉ MAXIMALE:",
+                "- Chiffrement ElGamal pour la confidentialité",
+                "- Preuve zk-SNARK pour garantir la validité",
+                "- Nullifier pour empêcher le double vote",
+                "- Vérification on-chain de la preuve",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `c1` - Composante 1 du chiffrement ElGamal = hash(r)",
+                "* `c2` - Composante 2 du chiffrement ElGamal = hash(r, publicKey, candidateId)",
+                "* `nullifier` - Identifiant unique anti-double vote = hash(voterSecret, electionId)",
+                "* `pi_a` - Première composante de la preuve Groth16 (point G1)",
+                "* `pi_b` - Deuxième composante de la preuve Groth16 (point G2)",
+                "* `pi_c` - Troisième composante de la preuve Groth16 (point G1)",
+                "* `public_signals` - Signaux publics pour vérification [numCandidates, c1, c2, publicKey, nullifier, electionId]",
+                "",
+                "# Sécurité",
+                "- Le vote est chiffré ElGamal (seul l'organisateur peut déchiffrer)",
+                "- La preuve zk-SNARK garantit que:",
+                "  1. Le candidateId est valide (< numCandidates)",
+                "  2. Le chiffrement ElGamal est correct",
+                "  3. Le nullifier est bien formé",
+                "- Le smart contract vérifie la preuve ON-CHAIN via pairing check",
+                "- Le nullifier empêche le double vote de manière anonyme",
+                "",
+                "# Workflow",
+                "1. Frontend génère la preuve zk-SNARK (2-3 secondes)",
+                "2. Transaction soumise au smart contract",
+                "3. Smart contract vérifie la preuve Groth16",
+                "4. Si valide, vote accepté et stocké",
+                "5. Nullifier enregistré pour empêcher double vote"
+            ],
+            "name": "submitPrivateVoteWithProof",
+            "mutability": "mutable",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                },
+                {
+                    "name": "c1",
+                    "type": "bytes"
+                },
+                {
+                    "name": "c2",
+                    "type": "bytes"
+                },
+                {
+                    "name": "nullifier",
+                    "type": "bytes"
+                },
+                {
+                    "name": "pi_a",
+                    "type": "G1Point"
+                },
+                {
+                    "name": "pi_b",
+                    "type": "G2Point"
+                },
+                {
+                    "name": "pi_c",
+                    "type": "G1Point"
+                },
+                {
+                    "name": "public_signals",
+                    "type": "List<bytes>"
+                }
+            ],
+            "outputs": []
+        },
+        {
+            "docs": [
+                "Récupère tous les votes chiffrés ElGamal d'une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "",
+                "# Returns",
+                "Vecteur de tous les votes chiffrés",
+                "",
+                "# Note",
+                "Cette view est utilisée par l'organisateur pour récupérer les votes",
+                "et les déchiffrer off-chain après la clôture de l'élection"
+            ],
+            "name": "getEncryptedVotes",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<ElGamalVote>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "docs": [
+                "**OPTION 2: RÉCUPÉRER VOTES CHIFFRÉS AVEC PREUVE ZK-SNARK**",
+                "",
+                "Récupère tous les votes chiffrés ElGamal avec preuves zk-SNARK d'une élection",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "",
+                "# Returns",
+                "Vecteur de tous les votes chiffrés avec leurs preuves Groth16",
+                "",
+                "# Note",
+                "Cette view est utilisée par:",
+                "- L'organisateur pour récupérer les votes et les déchiffrer off-chain",
+                "- Les auditeurs pour vérifier les preuves",
+                "- Le frontend pour afficher les statistiques (sans révéler les choix)"
+            ],
+            "name": "getEncryptedVotesWithProof",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<ElGamalVoteWithProof>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Récupère les nullifiers utilisés pour une élection (Option 2)",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "",
+                "# Returns",
+                "Ensemble des nullifiers déjà utilisés",
+                "",
+                "# Note",
+                "Permet de vérifier qu'un vote n'a pas déjà été soumis",
+                "Sans révéler l'identité du voteur"
+            ],
+            "name": "getOption2Nullifiers",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<bytes>",
+                    "multi_result": true
+                }
+            ]
         },
         {
             "docs": [
@@ -598,6 +858,39 @@
             ]
         },
         {
+            "identifier": "encryptedVoteSubmitted",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "timestamp",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
+            "identifier": "encryptedVoteWithProofSubmitted",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64",
+                    "indexed": true
+                },
+                {
+                    "name": "nullifier",
+                    "type": "bytes",
+                    "indexed": true
+                },
+                {
+                    "name": "timestamp",
+                    "type": "u64"
+                }
+            ]
+        },
+        {
             "identifier": "voterRegistered",
             "inputs": [
                 {
@@ -664,6 +957,56 @@
                 }
             ]
         },
+        "ElGamalVote": {
+            "type": "struct",
+            "docs": [
+                "Vote chiffré avec ElGamal (Option 1)",
+                "Chiffrement sur courbe elliptique secp256k1"
+            ],
+            "fields": [
+                {
+                    "name": "c1",
+                    "type": "bytes"
+                },
+                {
+                    "name": "c2",
+                    "type": "bytes"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "u64"
+                }
+            ]
+        },
+        "ElGamalVoteWithProof": {
+            "type": "struct",
+            "docs": [
+                "Vote chiffré ElGamal avec preuve zk-SNARK (Option 2)",
+                "Combine le chiffrement ElGamal avec une preuve mathématique de validité"
+            ],
+            "fields": [
+                {
+                    "name": "c1",
+                    "type": "bytes"
+                },
+                {
+                    "name": "c2",
+                    "type": "bytes"
+                },
+                {
+                    "name": "nullifier",
+                    "type": "bytes"
+                },
+                {
+                    "name": "proof",
+                    "type": "Groth16Proof"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "u64"
+                }
+            ]
+        },
         "Election": {
             "type": "struct",
             "docs": [
@@ -717,6 +1060,10 @@
                 {
                     "name": "registration_deadline",
                     "type": "Option<u64>"
+                },
+                {
+                    "name": "encryption_type",
+                    "type": "u8"
                 }
             ]
         },
@@ -761,6 +1108,66 @@
                 {
                     "name": "timestamp",
                     "type": "u64"
+                }
+            ]
+        },
+        "G1Point": {
+            "type": "struct",
+            "docs": [
+                "Point sur courbe elliptique G1 (BN254)"
+            ],
+            "fields": [
+                {
+                    "name": "x",
+                    "type": "bytes"
+                },
+                {
+                    "name": "y",
+                    "type": "bytes"
+                }
+            ]
+        },
+        "G2Point": {
+            "type": "struct",
+            "docs": [
+                "Point sur courbe elliptique G2 (BN254) - Extension field"
+            ],
+            "fields": [
+                {
+                    "name": "x1",
+                    "type": "bytes"
+                },
+                {
+                    "name": "x2",
+                    "type": "bytes"
+                },
+                {
+                    "name": "y1",
+                    "type": "bytes"
+                },
+                {
+                    "name": "y2",
+                    "type": "bytes"
+                }
+            ]
+        },
+        "Groth16Proof": {
+            "type": "struct",
+            "docs": [
+                "Preuve Groth16 pour zk-SNARK"
+            ],
+            "fields": [
+                {
+                    "name": "pi_a",
+                    "type": "G1Point"
+                },
+                {
+                    "name": "pi_b",
+                    "type": "G2Point"
+                },
+                {
+                    "name": "pi_c",
+                    "type": "G1Point"
                 }
             ]
         },

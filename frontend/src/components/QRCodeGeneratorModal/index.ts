@@ -1,0 +1,1 @@
+export { QRCodeGeneratorModal } from './QRCodeGeneratorModal';

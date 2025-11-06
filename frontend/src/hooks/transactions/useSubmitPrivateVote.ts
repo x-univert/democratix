@@ -11,6 +11,7 @@ import {
   useGetNetworkConfig
 } from 'lib';
 import { zkProofService } from '../../services/zkProofService';
+import { markPrivateVoteAsSubmitted } from '../elections/useHasVotedPrivately';
 
 const PRIVATE_VOTE_INFO = {
   processingMessage: 'Vote privé zk-SNARK en cours...',
@@ -134,6 +135,9 @@ export const useSubmitPrivateVote = () => {
         transactions: [transaction],
         transactionsDisplayInfo: PRIVATE_VOTE_INFO
       });
+
+      // Marquer le vote comme soumis dans localStorage
+      markPrivateVoteAsSubmitted(electionId, address);
 
       onProgress?.('Vote privé soumis avec succès!', 100);
       console.log('✅ Private vote transaction sent! Session ID:', sessionId);

@@ -74,3 +74,17 @@ multiversx-wallets/
 
 # Claude AI Configuration (local only)
 .claude/
+
+# Backend Secrets (NEVER commit!)
+backend/.secure-keys/
+backend/circuits/
+*.ptau
+*.zkey
+verification_key.json
+
+# Vercel
+.vercel
+
+# Temporary files
+nul
+*.bat

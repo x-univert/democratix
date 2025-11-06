@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation à Voter - DEMOCRATIX</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f4f4f7;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+      color: #ffffff;
+      padding: 40px 30px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header p {
+      margin: 10px 0 0;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .content h2 {
+      color: #1E40AF;
+      font-size: 22px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    .content p {
+      margin: 15px 0;
+      color: #555;
+    }
+    .info-box {
+      background: #F0F9FF;
+      border-left: 4px solid #3B82F6;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 6px;
+    }
+    .info-box strong {
+      color: #1E40AF;
+      font-size: 16px;
+      display: block;
+      margin-bottom: 8px;
+    }
+    .code-box {
+      background: #F9FAFB;
+      border: 2px dashed #3B82F6;
+      padding: 20px;
+      margin: 25px 0;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .code-box .label {
+      color: #666;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+    }
+    .code-box .code {
+      font-family: 'Courier New', monospace;
+      font-size: 20px;
+      font-weight: 700;
+      color: #1E40AF;
+      letter-spacing: 2px;
+      word-break: break-all;
+    }
+    .cta-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 16px 40px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px 0;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+      transition: all 0.3s ease;
+    }
+    .cta-button:hover {
+      box-shadow: 0 6px 16px rgba(30, 64, 175, 0.4);
+      transform: translateY(-2px);
+    }
+    .steps {
+      background: #F9FAFB;
+      padding: 25px;
+      margin: 25px 0;
+      border-radius: 8px;
+    }
+    .steps h3 {
+      color: #1E40AF;
+      font-size: 18px;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+    .steps ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .steps li {
+      margin: 10px 0;
+      color: #555;
+    }
+    .footer {
+      background: #F9FAFB;
+      padding: 30px;
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      border-top: 1px solid #E5E7EB;
+    }
+    .footer p {
+      margin: 8px 0;
+    }
+    .footer a {
+      color: #3B82F6;
+      text-decoration: none;
+    }
+    @media only screen and (max-width: 600px) {
+      .container {
+        margin: 20px 10px;
+      }
+      .header {
+        padding: 30px 20px;
+      }
+      .header h1 {
+        font-size: 24px;
+      }
+      .content {
+        padding: 30px 20px;
+      }
+      .cta-button {
+        display: block;
+        padding: 14px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🗳️ DEMOCRATIX</h1>
+      <p>Plateforme de Vote Décentralisé</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <h2>Vous êtes invité(e) à voter !</h2>
+
+      <p>Bonjour,</p>
+
+      <p>{{organizerName}} vous invite à participer à l'élection suivante :</p>
+
+      <div class="info-box">
+        <strong>📋 {{electionTitle}}</strong>
+        <p style="margin: 10px 0 0; color: #666;">
+          📅 Date limite : {{expirationDate}}
+        </p>
+      </div>
+
+      <p>
+        Vous avez reçu un <strong>code d'invitation unique</strong> pour participer à ce vote sécurisé
+        sur la blockchain MultiversX.
+      </p>
+
+      <!-- Code Box -->
+      <div class="code-box">
+        <div class="label">🎫 Votre Code d'Invitation</div>
+        <div class="code">{{invitationCode}}</div>
+      </div>
+
+      <!-- CTA Button -->
+      <div style="text-align: center;">
+        <a href="{{voteUrl}}" class="cta-button">
+          🗳️ Voter Maintenant
+        </a>
+      </div>
+
+      <!-- Instructions -->
+      <div class="steps">
+        <h3>📝 Comment voter ?</h3>
+        <ol>
+          <li>Cliquez sur le bouton "Voter Maintenant" ci-dessus</li>
+          <li>Connectez votre wallet MultiversX (xPortal, DeFi Wallet, etc.)</li>
+          <li>Utilisez votre code d'invitation pour vous inscrire</li>
+          <li>Consultez les candidats et votez pour votre choix</li>
+          <li>Signez la transaction blockchain</li>
+        </ol>
+      </div>
+
+      <p style="color: #666; font-size: 14px; margin-top: 30px;">
+        ⚠️ <strong>Important</strong> : Ce code ne peut être utilisé qu'une seule fois.
+        Ne le partagez avec personne.
+      </p>
+
+      <p style="color: #666; font-size: 14px;">
+        🔒 <strong>Sécurité</strong> : Votre vote est crypté et enregistré de manière immuable
+        sur la blockchain MultiversX. Personne, pas même les organisateurs, ne peut voir votre choix.
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p><strong>DEMOCRATIX</strong> - Vote Décentralisé Sécurisé</p>
+      <p>
+        Propulsé par la blockchain <a href="https://multiversx.com" target="_blank">MultiversX</a>
+      </p>
+      <p style="font-size: 12px; color: #999; margin-top: 15px;">
+        © {{currentYear}} DEMOCRATIX. Tous droits réservés.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

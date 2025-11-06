@@ -1,9 +1,9 @@
 // prettier-ignore
 export default {
-  header: 'header flex items-center justify-between px-4 h-16 md:h-20 md:px-10 border-b-4 border-secondary',
+  header: 'header flex items-center justify-between px-2 sm:px-4 h-16 md:h-20 md:px-10 border-b-4 border-secondary',
   headerLogo: 'header-logo transition-opacity duration-200',
-  headerNavigation: 'header-navigation flex items-center gap-2 lg:gap-4',
-  headerNavigationButtons: 'header-navigation-buttons flex gap-2 lg:gap-4',
+  headerNavigation: 'header-navigation flex items-center gap-1 sm:gap-2 lg:gap-4',
+  headerNavigationButtons: 'header-navigation-buttons flex gap-1 sm:gap-2 lg:gap-4',
   headerNavigationButton: 'header-navigation-button flex justify-center items-center w-8 lg:w-10 h-8 lg:h-10 rounded-xl cursor-pointer relative after:rounded-xl after:absolute after:bg-btn-variant hover:after:bg-btn-hover  after:transition-all after:duration-200 after:ease-out after:left-0 after:right-0 after:top-0 after:bottom-0 after:pointer-events-none hover:after:opacity-100',
   headerNavigationButtonIcon: 'header-navigation-button-icon flex justify-center relative text-xs lg:text-base z-1 items-center text-tertiary',
   headerNavigationTooltip: 'header-navigation-tooltip p-1 leading-none whitespace-nowrap text-tertiary',
@@ -13,7 +13,7 @@ export default {
   headerNavigationConnectDesktop: 'header-navigation-connect-desktop h-8 lg:h-10 hidden sm:block!',
   headerNavigationConnectMobile: 'header-navigation-connect-mobile w-8 h-8 bg-btn-tertiary cursor-pointer flex justify-center items-center sm:hidden text-xs rounded-xl',
   headerNavigationConnectIcon: 'header-navigation-connect-icon text-accent',
-  headerNavigationAddress: 'header-navigation-address h-8 lg:h-10 w-8 lg:w-full text-primary justify-center text-xs rounded-xl lg:text-base lg:pr-4 lg:pl-5 max-w-100 flex relative lg:border lg:border-secondary lg:rounded-full items-center gap-3 after:absolute after:bg-btn-tertiary after:rounded-xl lg:after:rounded-full after:opacity-40 after:left-0 after:right-0 after:top-0 after:bottom-0 after:pointer-events-none',
+  headerNavigationAddress: 'header-navigation-address h-8 lg:h-10 w-auto lg:w-full text-primary justify-center text-xs rounded-xl lg:text-base lg:pr-4 lg:pl-5 max-w-100 flex relative lg:border lg:border-secondary lg:rounded-full items-center gap-1 sm:gap-2 lg:gap-3 after:absolute after:bg-btn-tertiary after:rounded-xl lg:after:rounded-full after:opacity-40 after:left-0 after:right-0 after:top-0 after:bottom-0 after:pointer-events-none',
   headerNavigationAddressWallet: 'header-navigation-address-wallet relative z-1 text-accent hidden lg:flex!',
   headerNavigationAddressExplorer: 'header-navigation-address-explorer min-w-0 relative z-1 hidden lg:block!',
   headerNavigationAddressLogout: 'header-navigation-address-logout text-tertiary cursor-pointer relative z-1 transition-all duration-200 ease-out hover:text-accent',

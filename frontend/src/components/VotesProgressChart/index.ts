@@ -1,0 +1,1 @@
+export { VotesProgressChart } from './VotesProgressChart';

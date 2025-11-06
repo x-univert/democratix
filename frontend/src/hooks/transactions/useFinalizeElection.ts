@@ -1,6 +1,6 @@
 import { votingContract } from 'config';
 import votingAbi from 'contracts/voting.abi.json';
-import { signAndSendTransactions } from 'helpers';
+import { signAndSendTransactionsWithHash } from 'helpers';
 import {
   AbiRegistry,
   Address,
@@ -42,13 +42,16 @@ export const useFinalizeElection = () => {
         }
       );
 
-      // 3. Signer et envoyer
-      const sessionId = await signAndSendTransactions({
+      // 3. Signer et envoyer avec hash de transaction
+      const result = await signAndSendTransactionsWithHash({
         transactions: [transaction],
         transactionsDisplayInfo: FINALIZE_ELECTION_INFO
       });
 
-      return sessionId;
+      return {
+        sessionId: result.sessionId,
+        transactionHash: result.transactionHashes[0]
+      };
     } catch (err) {
       console.error('Error finalizing election:', err);
       throw err;

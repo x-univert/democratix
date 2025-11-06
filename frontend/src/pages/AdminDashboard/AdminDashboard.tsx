@@ -4,6 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { useGetAccount } from 'lib';
 import { useGetElections, type Election } from 'hooks/elections';
 import { RouteNamesEnum } from 'localConstants';
+import { exportDashboardToPDF } from '../../utils/pdfExport';
+import { useWebSocketDashboard } from '../../hooks/useWebSocketDashboard';
+import { SkeletonDashboard } from '../../components/Skeleton';
+import { VotesTimelineChart } from '../../components/VotesTimelineChart';
 import {
   BarChart,
   Bar,
@@ -12,6 +16,8 @@ import {
   Cell,
   LineChart,
   Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -30,29 +36,51 @@ export const AdminDashboard = () => {
   const [myElections, setMyElections] = useState<Election[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'Pending' | 'Active' | 'Closed' | 'Finalized'>('all');
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const allElections = await getElections();
-        setElections(allElections);
+  // WebSocket pour mises à jour en temps réel
+  const { connected: wsConnected, lastMessage } = useWebSocketDashboard(!!address);
 
-        // Filtrer les élections dont l'utilisateur est l'organisateur
-        if (address) {
-          const organized = allElections.filter(
-            e => e.organizer.toLowerCase() === address.toLowerCase()
-          );
-          setMyElections(organized);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const allElections = await getElections();
+      setElections(allElections);
+
+      // Filtrer les élections dont l'utilisateur est l'organisateur
+      if (address) {
+        const organized = allElections.filter(
+          e => e.organizer.toLowerCase() === address.toLowerCase()
+        );
+        setMyElections(organized);
       }
-    };
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, [address]);
+
+  // Rafraîchir les données quand un message WebSocket est reçu
+  useEffect(() => {
+    if (lastMessage && lastMessage.type) {
+      console.log('[Dashboard] WebSocket event received:', lastMessage.type);
+
+      // Rafraîchir les données pour certains événements
+      if (
+        lastMessage.type === 'election-created' ||
+        lastMessage.type === 'election-activated' ||
+        lastMessage.type === 'election-closed' ||
+        lastMessage.type === 'vote-cast' ||
+        lastMessage.type === 'election-finalized'
+      ) {
+        console.log('[Dashboard] Refreshing data due to WebSocket event');
+        fetchData();
+      }
+    }
+  }, [lastMessage]);
 
   // Calculer les statistiques générales
   const globalStats = useMemo(() => {
@@ -120,6 +148,48 @@ export const AdminDashboard = () => {
     return myElections.filter(e => e.status === filterStatus);
   }, [myElections, filterStatus]);
 
+  // Générer des données de progression temporelle pour les élections actives/fermées
+  const progressionData = useMemo(() => {
+    const activeOrClosedElections = myElections.filter(
+      e => e.status === 'Active' || e.status === 'Closed' || e.status === 'Finalized'
+    );
+
+    if (activeOrClosedElections.length === 0) return [];
+
+    // Prendre l'élection avec le plus de votes
+    const topElection = activeOrClosedElections.sort((a, b) => b.total_votes - a.total_votes)[0];
+
+    // Simuler une progression temporelle
+    const startTime = topElection.start_time * 1000;
+    const endTime = topElection.end_time * 1000;
+    const now = Date.now();
+    const duration = endTime - startTime;
+    const elapsed = Math.min(now - startTime, duration);
+
+    const points = 10;
+    const interval = elapsed / points;
+    const data = [];
+
+    for (let i = 0; i <= points; i++) {
+      const timestamp = startTime + (interval * i);
+      if (timestamp > now) break;
+
+      const progress = i / points;
+      const votes = Math.round(topElection.total_votes * progress);
+      const participation = topElection.registered_voters_count > 0
+        ? Math.round((votes / topElection.registered_voters_count) * 100)
+        : 0;
+
+      data.push({
+        time: new Date(timestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+        votes,
+        participation
+      });
+    }
+
+    return data;
+  }, [myElections]);
+
   const formatDateTime = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString('fr-FR', {
       day: '2-digit',
@@ -142,6 +212,37 @@ export const AdminDashboard = () => {
         return { text: t('electionCard.status.finalized'), bgClass: 'bg-accent', textClass: 'text-primary' };
       default:
         return { text: status, bgClass: 'bg-secondary', textClass: 'text-primary' };
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!address) return;
+
+    try {
+      // Préparer les données pour le PDF
+      const dashboardElections = myElections.map(e => ({
+        id: e.id,
+        title: e.title,
+        status: e.status,
+        start_time: e.start_time,
+        end_time: e.end_time,
+        total_votes: e.total_votes,
+        num_candidates: e.num_candidates,
+        registered_voters_count: e.registered_voters_count,
+        requires_registration: e.requires_registration,
+        organizer: e.organizer
+      }));
+
+      await exportDashboardToPDF({
+        globalStats,
+        myStats,
+        myElections: dashboardElections,
+        organizerAddress: address
+      });
+
+      console.log('✅ PDF exporté avec succès');
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'export PDF:', error);
     }
   };
 
@@ -173,11 +274,8 @@ export const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-          <div className="w-12 h-12 border-4 border-secondary border-t-accent rounded-full animate-spin"></div>
-          <p className="text-secondary">{t('admin.loading')}</p>
-        </div>
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <SkeletonDashboard />
       </div>
     );
   }
@@ -497,10 +595,69 @@ export const AdminDashboard = () => {
         </div>
       )}
 
+      {/* Progression des votes dans le temps */}
+      {progressionData.length > 0 && (
+        <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 shadow-md mb-8">
+          <h3 className="text-xl font-bold text-primary mb-4">
+            Progression des votes dans le temps
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <AreaChart data={progressionData}>
+              <defs>
+                <linearGradient id="colorVotes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.1}/>
+                </linearGradient>
+                <linearGradient id="colorParticipation" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0.1}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+              <XAxis dataKey="time" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }}
+                labelStyle={{ color: '#f3f4f6' }}
+              />
+              <Legend />
+              <Area
+                type="monotone"
+                dataKey="votes"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorVotes)"
+                name="Votes"
+              />
+              <Area
+                type="monotone"
+                dataKey="participation"
+                stroke="#10b981"
+                strokeWidth={2}
+                fillOpacity={1}
+                fill="url(#colorParticipation)"
+                name="Participation %"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Timeline de participation détaillée pour une élection active */}
+      {myElections.length > 0 && myElections.some(e => e.status === 'Active' || e.status === 'Closed') && (
+        <div className="mb-8">
+          <VotesTimelineChart
+            electionId={myElections.find(e => e.status === 'Active' || e.status === 'Closed')?.id || myElections[0].id}
+            onError={(error) => console.error('[Dashboard] Timeline error:', error)}
+          />
+        </div>
+      )}
+
       {/* Actions rapides */}
       <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 shadow-md">
         <h3 className="text-xl font-bold text-primary mb-4">{t('admin.quickActions.title')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             onClick={() => navigate(RouteNamesEnum.createElection)}
             className="p-6 bg-primary border-2 border-accent rounded-lg hover:shadow-lg transition-all hover:-translate-y-1"
@@ -526,6 +683,16 @@ export const AdminDashboard = () => {
             <div className="text-4xl mb-2">👤</div>
             <h4 className="font-bold text-primary mb-1">{t('admin.quickActions.myProfile')}</h4>
             <p className="text-sm text-secondary">{t('admin.quickActions.myProfileDesc')}</p>
+          </button>
+
+          <button
+            onClick={handleExportPDF}
+            disabled={myElections.length === 0}
+            className="p-6 bg-primary border-2 border-accent rounded-lg hover:shadow-lg transition-all hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
+          >
+            <div className="text-4xl mb-2">📄</div>
+            <h4 className="font-bold text-primary mb-1">{t('admin.quickActions.exportPDF')}</h4>
+            <p className="text-sm text-secondary">{t('admin.quickActions.exportPDFDesc')}</p>
           </button>
         </div>
       </div>

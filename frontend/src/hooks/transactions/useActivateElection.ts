@@ -1,6 +1,6 @@
 import { votingContract } from 'config';
 import votingAbi from 'contracts/voting.abi.json';
-import { signAndSendTransactions } from 'helpers';
+import { signAndSendTransactionsWithHash } from 'helpers';
 import {
   AbiRegistry,
   Address,
@@ -42,13 +42,16 @@ export const useActivateElection = () => {
         }
       );
 
-      // 3. Signer et envoyer
-      const sessionId = await signAndSendTransactions({
+      // 3. Signer et envoyer - version avec hash
+      const result = await signAndSendTransactionsWithHash({
         transactions: [transaction],
         transactionsDisplayInfo: ACTIVATE_ELECTION_INFO
       });
 
-      return sessionId;
+      return {
+        sessionId: result.sessionId,
+        transactionHash: result.transactionHashes[0]
+      };
     } catch (err) {
       console.error('Error activating election:', err);
       throw err;

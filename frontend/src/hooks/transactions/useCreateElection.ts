@@ -26,6 +26,7 @@ export const useCreateElection = () => {
     start_time: number,
     end_time: number,
     requires_registration: boolean = false,
+    encryption_type: number = 0,
     registration_deadline: number | null = null
   ) => {
     try {
@@ -44,7 +45,8 @@ export const useCreateElection = () => {
         description_ipfs,       // bytes
         start_time,             // u64
         end_time,               // u64
-        requires_registration   // bool
+        requires_registration,  // bool
+        encryption_type         // u8
       ];
 
       // Ajouter registration_deadline si présent (OptionalValue<u64>)

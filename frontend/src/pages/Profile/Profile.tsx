@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useGetAccount } from 'lib';
 import { useGetUserVotingHistory, useElectionMetadata, useIPFSImage } from 'hooks/elections';
 import { RouteNamesEnum } from 'localConstants';
+import { SkeletonProfile } from '../../components/Skeleton';
 
 export const Profile = () => {
   const { t } = useTranslation();
@@ -65,11 +66,8 @@ export const Profile = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-          <div className="w-12 h-12 border-4 border-secondary border-t-accent rounded-full animate-spin"></div>
-          <p className="text-secondary">{t('profile.loading')}</p>
-        </div>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <SkeletonProfile />
       </div>
     );
   }

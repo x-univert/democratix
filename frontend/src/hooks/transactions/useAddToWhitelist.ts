@@ -1,6 +1,6 @@
 import { votingContract } from 'config';
 import votingAbi from 'contracts/voting.abi.json';
-import { signAndSendTransactions } from 'helpers';
+import { signAndSendTransactionsWithHash } from 'helpers';
 import {
   AbiRegistry,
   Address,
@@ -43,12 +43,12 @@ export const useAddToWhitelist = () => {
         }
       );
 
-      const sessionId = await signAndSendTransactions({
+      const result = await signAndSendTransactionsWithHash({
         transactions: [transaction],
         transactionsDisplayInfo: ADD_TO_WHITELIST_INFO
       });
 
-      return sessionId;
+      return result;
     } catch (err) {
       console.error('Error adding to whitelist:', err);
       throw err;

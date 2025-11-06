@@ -34,6 +34,7 @@ export interface ElectionData {
   }>;
   status: string;
   total_votes: number;
+  encryption_type?: number; // 0=none, 1=elgamal, 2=elgamal+zksnark
 }
 
 /**
@@ -183,37 +184,171 @@ export class MultiversXService {
     try {
       logger.info('Fetching election from blockchain', { electionId });
 
-      const query = new SmartContractQuery({
-        contract: this.votingContractAddress,
-        function: 'getElection',
-        arguments: [this.encodeU64(electionId)],
+      // Use direct API call instead of SmartContractQuery to avoid SDK v15 bug
+      const gatewayUrl = process.env.MULTIVERSX_GATEWAY_URL || 'https://devnet-gateway.multiversx.com';
+      const contractAddress = this.votingContractAddress.toBech32();
+
+      // Encode electionId as hex string for API (u64 = 8 bytes = 16 hex chars)
+      const electionIdHex = electionId.toString(16).padStart(16, '0');
+
+      const queryPayload = {
+        scAddress: contractAddress,
+        funcName: 'getElection',
+        args: [electionIdHex]
+      };
+
+      logger.info('Query payload for getElection', { queryPayload });
+
+      const response = await fetch(`${gatewayUrl}/vm-values/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryPayload)
       });
 
-      const queryResponse = await this.proxyProvider.queryContract(query as any);
+      const result: any = await response.json();
 
-      if (!queryResponse.returnData || queryResponse.returnData.length === 0) {
+      // Check if query succeeded
+      if (result.data?.data?.returnCode !== 'ok') {
+        logger.error('Query failed for getElection', { result });
+        return null;
+      }
+
+      // Get return data
+      const returnData = result.data?.data?.returnData;
+      if (!returnData || returnData.length === 0) {
         logger.warn('Election not found', { electionId });
         return null;
       }
 
-      // Parser la réponse manuellement (sans ABI dans cette version)
-      // Note: Avec ABI, on pourrait utiliser parsedResponse = controller.parseQueryResponse(response)
-      const returnData = queryResponse.returnData;
+      // Parse the nested buffer - returnData[0] contains all election data
+      const electionBuffer = Buffer.from(returnData[0], 'base64');
+      let offset = 0;
 
-      // Convertir en ElectionData (à adapter selon la structure exacte du smart contract)
-      const election: ElectionData = {
-        id: electionId,
-        title: Buffer.from(returnData[0], 'base64').toString('utf8'),
-        description_ipfs: Buffer.from(returnData[1], 'base64').toString('utf8'),
-        organizer: new Address(Buffer.from(returnData[2], 'base64')).toBech32(),
-        start_time: Number(Buffer.from(returnData[3], 'base64').readBigUInt64BE()),
-        end_time: Number(Buffer.from(returnData[4], 'base64').readBigUInt64BE()),
-        candidates: [], // À parser selon structure
-        status: Buffer.from(returnData[6], 'base64').toString('utf8'),
-        total_votes: Number(Buffer.from(returnData[7], 'base64').readBigUInt64BE()),
+      logger.info('Parsing election buffer', {
+        electionId,
+        bufferLength: electionBuffer.length,
+        bufferHex: electionBuffer.toString('hex').substring(0, 100) + '...'
+      });
+
+      // Helper to read u32 (4 bytes big-endian)
+      const readU32 = (): number => {
+        const value = electionBuffer.readUInt32BE(offset);
+        offset += 4;
+        return value;
       };
 
-      logger.info('Election fetched successfully', { electionId });
+      // Helper to read u64 (8 bytes big-endian)
+      const readU64 = (): number => {
+        const value = Number(electionBuffer.readBigUInt64BE(offset));
+        offset += 8;
+        return value;
+      };
+
+      // Helper to read ManagedBuffer (4-byte length + data)
+      const readManagedBuffer = (): string => {
+        const length = readU32();
+        const data = electionBuffer.slice(offset, offset + length).toString('utf8');
+        offset += length;
+        return data;
+      };
+
+      // Helper to read Address (32 bytes)
+      const readAddress = (): string => {
+        const addressBytes = electionBuffer.slice(offset, offset + 32);
+        offset += 32;
+        return new Address(addressBytes).toBech32();
+      };
+
+      // Parse election structure
+      // 1. ID (u64 - 8 bytes)
+      const id = readU64();
+
+      // 2. Title (ManagedBuffer)
+      const title = readManagedBuffer();
+
+      // 3. Description IPFS (ManagedBuffer)
+      const description_ipfs = readManagedBuffer();
+
+      // 4. Organizer (Address - 32 bytes)
+      const organizer = readAddress();
+
+      // 5. Start time (u64)
+      const start_time = readU64();
+
+      // 6. End time (u64)
+      const end_time = readU64();
+
+      // 7. Num candidates (u32)
+      const num_candidates = readU32();
+
+      // 8. Status (enum - 1 byte: 0=Pending, 1=Active, 2=Closed, 3=Finalized)
+      const statusValue = electionBuffer[offset];
+      offset += 1;
+      const statusNames = ['Pending', 'Active', 'Closed', 'Finalized'];
+      const status = statusNames[statusValue] || 'Pending';
+
+      // 9. Total votes (u64)
+      const total_votes = readU64();
+
+      // 10. Requires registration (bool - 1 byte) - NOUVEAU
+      let requires_registration = false;
+      if (offset < electionBuffer.length) {
+        requires_registration = electionBuffer[offset] === 1;
+        offset += 1;
+      }
+
+      // 11. Registered voters count (u64) - NOUVEAU
+      let registered_voters_count = 0;
+      if (offset < electionBuffer.length) {
+        registered_voters_count = readU64();
+      }
+
+      // 12. Registration deadline (Option<u64>) - NOUVEAU
+      let registration_deadline: number | null = null;
+      if (offset < electionBuffer.length) {
+        const hasDeadline = electionBuffer[offset];
+        offset += 1;
+        if (hasDeadline === 1) {
+          registration_deadline = readU64();
+        }
+      }
+
+      // 13. Encryption type (u8 - 1 byte) - NOUVEAU
+      let encryption_type = 0;
+      if (offset < electionBuffer.length) {
+        encryption_type = electionBuffer[offset];
+        offset += 1;
+      }
+
+      logger.info('Election parsed successfully', {
+        electionId,
+        id,
+        title,
+        status,
+        statusValue,
+        total_votes,
+        start_time,
+        end_time,
+        num_candidates,
+        requires_registration,
+        registered_voters_count,
+        registration_deadline,
+        encryption_type
+      });
+
+      const election: ElectionData = {
+        id: id || electionId,
+        title,
+        description_ipfs,
+        organizer,
+        start_time,
+        end_time,
+        candidates: [], // Will be fetched separately
+        status: status as 'Pending' | 'Active' | 'Closed' | 'Finalized',
+        total_votes,
+        encryption_type,
+      };
+
       return election;
     } catch (error: any) {
       logger.error('Error fetching election', {
@@ -443,6 +578,427 @@ export class MultiversXService {
         txHash,
       });
       return false;
+    }
+  }
+
+  // === MÉTHODES POUR CHIFFREMENT ELGAMAL (OPTION 1) ===
+
+  /**
+   * Préparer une transaction pour définir la clé publique ElGamal d'une élection
+   */
+  async prepareSetElectionPublicKeyTransaction(params: {
+    electionId: number;
+    publicKey: string;
+    sender: string;
+  }): Promise<Transaction> {
+    try {
+      const senderAddress = Address.newFromBech32(params.sender);
+
+      // Convertir la clé publique hex en BytesValue
+      const publicKeyBytes = this.encodeHex(params.publicKey);
+
+      const transaction = await this.transactionsFactory.createTransactionForExecute(
+        senderAddress,
+        {
+          contract: this.votingContractAddress,
+          function: 'setElectionPublicKey',
+          gasLimit: 5_000_000n,
+          arguments: [
+            new U64Value(params.electionId),
+            new BytesValue(Buffer.from(publicKeyBytes))
+          ],
+        }
+      );
+
+      return transaction;
+    } catch (error: any) {
+      logger.error('Error preparing setElectionPublicKey transaction', {
+        error: error.message,
+      });
+      throw new Error(`Failed to prepare transaction: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer la clé publique ElGamal d'une élection depuis le smart contract
+   */
+  async getElectionPublicKey(electionId: number): Promise<string | null> {
+    try {
+      logger.info('Fetching ElGamal public key from smart contract', { electionId });
+
+      // Use direct API call instead of SmartContractQuery to avoid SDK v15 bug
+      const gatewayUrl = process.env.MULTIVERSX_GATEWAY_URL || 'https://devnet-gateway.multiversx.com';
+      const contractAddress = this.votingContractAddress.toBech32();
+
+      // Encode electionId as hex string for API
+      const electionIdHex = electionId.toString(16).padStart(2, '0');
+
+      const queryPayload = {
+        scAddress: contractAddress,
+        funcName: 'getElectionPublicKey',
+        args: [electionIdHex]
+      };
+
+      logger.info('Query payload', { queryPayload });
+
+      const response = await fetch(`${gatewayUrl}/vm-values/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryPayload)
+      });
+
+      const result: any = await response.json();
+
+      // Check if query succeeded
+      if (result.data?.data?.returnCode !== 'ok') {
+        logger.error('Query failed', { result });
+        return null;
+      }
+
+      // Get return data
+      const returnData = result.data?.data?.returnData;
+      if (!returnData || returnData.length === 0) {
+        logger.info('No ElGamal public key found for election', { electionId });
+        return null;
+      }
+
+      // Decode the public key from base64
+      // The data is stored as hex string in the blockchain, so we decode base64 to get the hex string
+      const publicKeyHex = Buffer.from(returnData[0], 'base64').toString('utf8');
+
+      if (publicKeyHex.length === 0) {
+        return null;
+      }
+
+      logger.info('ElGamal public key retrieved', {
+        electionId,
+        publicKey: publicKeyHex.substring(0, 20) + '...'
+      });
+
+      return publicKeyHex;
+    } catch (error: any) {
+      logger.error('Error fetching ElGamal public key', {
+        error: error.message,
+        electionId
+      });
+      throw new Error(`Failed to fetch ElGamal public key: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer tous les votes chiffrés ElGamal d'une élection
+   */
+  async getEncryptedVotes(electionId: number): Promise<Array<{
+    c1: string;
+    c2: string;
+    timestamp: number;
+  }>> {
+    try {
+      logger.info('Fetching encrypted votes from smart contract', { electionId });
+
+      // Use direct API call instead of SmartContractQuery to avoid SDK v15 bug
+      const gatewayUrl = process.env.MULTIVERSX_GATEWAY_URL || 'https://devnet-gateway.multiversx.com';
+      const contractAddress = this.votingContractAddress.toBech32();
+
+      // Encode electionId as hex string for API (u64 = 8 bytes = 16 hex chars)
+      const electionIdHex = electionId.toString(16).padStart(16, '0');
+
+      const queryPayload = {
+        scAddress: contractAddress,
+        funcName: 'getEncryptedVotes',
+        args: [electionIdHex]
+      };
+
+      const response = await fetch(`${gatewayUrl}/vm-values/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryPayload)
+      });
+
+      const result: any = await response.json();
+
+      // Check if query succeeded
+      if (result.data?.data?.returnCode !== 'ok') {
+        logger.error('Query failed for getEncryptedVotes', { result });
+        return [];
+      }
+
+      // Get return data
+      const returnData = result.data?.data?.returnData;
+      if (!returnData || returnData.length === 0) {
+        logger.info('No encrypted votes found for election', { electionId });
+        return [];
+      }
+
+      // Log returnData structure for debugging
+      logger.info('Encrypted votes returnData structure', {
+        electionId,
+        returnDataLength: returnData.length,
+        returnDataIndexes: returnData.map((item: any, idx: number) => ({
+          index: idx,
+          base64Length: item ? item.length : 0,
+          isUndefined: item === undefined,
+          preview: item ? item.substring(0, 20) + '...' : 'undefined'
+        }))
+      });
+
+      // Le smart contract retourne une MultiValueEncoded<ElGamalVote>
+      // Chaque élément du returnData est un ElGamalVote complet encodé (c1 + c2 + timestamp)
+      const votes: Array<{ c1: string; c2: string; timestamp: number }> = [];
+
+      // Helper to read u32 (4 bytes big-endian)
+      const readU32 = (buffer: Buffer, offset: number): number => {
+        return buffer.readUInt32BE(offset);
+      };
+
+      // Helper to read u64 (8 bytes big-endian)
+      const readU64 = (buffer: Buffer, offset: number): number => {
+        return Number(buffer.readBigUInt64BE(offset));
+      };
+
+      // Helper to read ManagedBuffer (4-byte length + data)
+      // For ElGamal votes, c1 and c2 are stored as ASCII hex strings in the smart contract
+      const readManagedBuffer = (buffer: Buffer, offset: number): { data: string; nextOffset: number } => {
+        const length = readU32(buffer, offset);
+        // The data is stored as ASCII characters representing hex (e.g., "0365..." not raw bytes)
+        // So we need to convert ASCII to string first
+        const data = buffer.slice(offset + 4, offset + 4 + length).toString('utf8');
+        return { data, nextOffset: offset + 4 + length };
+      };
+
+      for (let i = 0; i < returnData.length; i++) {
+        try {
+          const voteBuffer = Buffer.from(returnData[i], 'base64');
+          let offset = 0;
+
+          logger.info('Parsing vote buffer', {
+            index: i,
+            bufferLength: voteBuffer.length,
+            bufferHex: voteBuffer.toString('hex').substring(0, 40) + '...'
+          });
+
+          // Parse ElGamalVote structure:
+          // 1. c1 (ManagedBuffer - 4 bytes length + data)
+          const c1Result = readManagedBuffer(voteBuffer, offset);
+          const c1 = c1Result.data;
+          offset = c1Result.nextOffset;
+
+          // 2. c2 (ManagedBuffer - 4 bytes length + data)
+          const c2Result = readManagedBuffer(voteBuffer, offset);
+          const c2 = c2Result.data;
+          offset = c2Result.nextOffset;
+
+          // 3. timestamp (u64 - 8 bytes)
+          const timestamp = readU64(voteBuffer, offset);
+
+          logger.info('Vote parsed successfully', {
+            index: i,
+            c1Length: c1.length,
+            c2Length: c2.length,
+            c1Preview: c1.substring(0, 20) + '...',
+            c2Preview: c2.substring(0, 20) + '...',
+            timestamp
+          });
+
+          votes.push({ c1, c2, timestamp });
+        } catch (error: any) {
+          logger.error('Error parsing vote', {
+            index: i,
+            error: error.message
+          });
+        }
+      }
+
+      logger.info('Encrypted votes retrieved', {
+        electionId,
+        voteCount: votes.length
+      });
+
+      return votes;
+    } catch (error: any) {
+      logger.error('Error fetching encrypted votes', {
+        error: error.message,
+        electionId
+      });
+      throw new Error(`Failed to fetch encrypted votes: ${error.message}`);
+    }
+  }
+
+  /**
+   * Récupérer tous les votes chiffrés ElGamal avec preuve zk-SNARK d'une élection (Option 2)
+   */
+  async getEncryptedVotesWithProof(electionId: number): Promise<Array<{
+    c1: string;
+    c2: string;
+    nullifier: string;
+    timestamp: number;
+  }>> {
+    try {
+      logger.info('Fetching Option 2 encrypted votes with proof from smart contract', { electionId });
+
+      // Use direct API call instead of SmartContractQuery to avoid SDK v15 bug
+      const gatewayUrl = process.env.MULTIVERSX_GATEWAY_URL || 'https://devnet-gateway.multiversx.com';
+      const contractAddress = this.votingContractAddress.toBech32();
+
+      // Encode electionId as hex string for API (u64 = 8 bytes = 16 hex chars)
+      const electionIdHex = electionId.toString(16).padStart(16, '0');
+
+      const queryPayload = {
+        scAddress: contractAddress,
+        funcName: 'getEncryptedVotesWithProof',
+        args: [electionIdHex]
+      };
+
+      const response = await fetch(`${gatewayUrl}/vm-values/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(queryPayload)
+      });
+
+      const result: any = await response.json();
+
+      // Check if query succeeded
+      if (result.data?.data?.returnCode !== 'ok') {
+        logger.error('Query failed for getEncryptedVotesWithProof', { result });
+        return [];
+      }
+
+      // Get return data
+      const returnData = result.data?.data?.returnData;
+      if (!returnData || returnData.length === 0) {
+        logger.info('No Option 2 encrypted votes found for election', { electionId });
+        return [];
+      }
+
+      // Log returnData structure for debugging
+      logger.info('Option 2 encrypted votes returnData structure', {
+        electionId,
+        returnDataLength: returnData.length,
+        returnDataIndexes: returnData.map((item: any, idx: number) => ({
+          index: idx,
+          base64Length: item ? item.length : 0,
+          isUndefined: item === undefined,
+          preview: item ? item.substring(0, 20) + '...' : 'undefined'
+        }))
+      });
+
+      // Le smart contract retourne une MultiValueEncoded<ElGamalVoteWithProof>
+      // Chaque élément du returnData est un ElGamalVoteWithProof complet encodé
+      const votes: Array<{ c1: string; c2: string; nullifier: string; timestamp: number }> = [];
+
+      // Helper to read u32 (4 bytes big-endian)
+      const readU32 = (buffer: Buffer, offset: number): number => {
+        return buffer.readUInt32BE(offset);
+      };
+
+      // Helper to read u64 (8 bytes big-endian)
+      const readU64 = (buffer: Buffer, offset: number): number => {
+        return Number(buffer.readBigUInt64BE(offset));
+      };
+
+      // Helper to read ManagedBuffer (4-byte length + data)
+      const readManagedBuffer = (buffer: Buffer, offset: number): { data: string; nextOffset: number } => {
+        const length = readU32(buffer, offset);
+        const data = buffer.slice(offset + 4, offset + 4 + length).toString('utf8');
+        return { data, nextOffset: offset + 4 + length };
+      };
+
+      for (let i = 0; i < returnData.length; i++) {
+        try {
+          const voteBuffer = Buffer.from(returnData[i], 'base64');
+          let offset = 0;
+
+          logger.info('Parsing Option 2 vote buffer', {
+            index: i,
+            bufferLength: voteBuffer.length,
+            bufferHex: voteBuffer.toString('hex').substring(0, 40) + '...'
+          });
+
+          // Parse ElGamalVoteWithProof structure:
+          // 1. c1 (ManagedBuffer - 4 bytes length + data)
+          const c1Result = readManagedBuffer(voteBuffer, offset);
+          const c1 = c1Result.data;
+          offset = c1Result.nextOffset;
+
+          logger.info('Parsed c1', { c1Length: c1.length, c1Preview: c1.substring(0, 20) });
+
+          // 2. c2 (ManagedBuffer - 4 bytes length + data)
+          const c2Result = readManagedBuffer(voteBuffer, offset);
+          const c2 = c2Result.data;
+          offset = c2Result.nextOffset;
+
+          logger.info('Parsed c2', { c2Length: c2.length, c2Preview: c2.substring(0, 20) });
+
+          // 3. nullifier (ManagedBuffer - 4 bytes length + data)
+          const nullifierResult = readManagedBuffer(voteBuffer, offset);
+          const nullifier = nullifierResult.data;
+          offset = nullifierResult.nextOffset;
+
+          logger.info('Parsed nullifier', { nullifierLength: nullifier.length, nullifierPreview: nullifier.substring(0, 20) });
+
+          // 4. proof (Groth16Proof - pi_a, pi_b, pi_c)
+          // pi_a: G1Point (2 ManagedBuffers: x, y)
+          const pi_a_x_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_a_x_result.nextOffset;
+          const pi_a_y_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_a_y_result.nextOffset;
+
+          // pi_b: G2Point (4 ManagedBuffers: x1, x2, y1, y2)
+          const pi_b_x1_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_b_x1_result.nextOffset;
+          const pi_b_x2_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_b_x2_result.nextOffset;
+          const pi_b_y1_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_b_y1_result.nextOffset;
+          const pi_b_y2_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_b_y2_result.nextOffset;
+
+          // pi_c: G1Point (2 ManagedBuffers: x, y)
+          const pi_c_x_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_c_x_result.nextOffset;
+          const pi_c_y_result = readManagedBuffer(voteBuffer, offset);
+          offset = pi_c_y_result.nextOffset;
+
+          logger.info('Skipped Groth16 proof', { offsetAfterProof: offset, bufferLength: voteBuffer.length });
+
+          // 5. timestamp (u64 - 8 bytes)
+          const timestamp = readU64(voteBuffer, offset);
+
+          // Les valeurs c1 et c2 sont déjà en format hexadécimal (66 caractères)
+          // depuis la modification du frontend zkproofEncrypted.ts
+          // Pas besoin de conversion, on les utilise directement
+          logger.info('Option 2 vote parsed successfully', {
+            index: i,
+            c1Length: c1.length,
+            c2Length: c2.length,
+            c1Hex: c1.substring(0, 20) + '...',
+            c2Hex: c2.substring(0, 20) + '...',
+            nullifierLength: nullifier.length,
+            nullifierPreview: nullifier.substring(0, 20) + '...',
+            timestamp
+          });
+
+          votes.push({ c1, c2, nullifier, timestamp });
+        } catch (error: any) {
+          logger.error('Error parsing Option 2 vote', {
+            index: i,
+            error: error.message
+          });
+        }
+      }
+
+      logger.info('Option 2 encrypted votes retrieved', {
+        electionId,
+        voteCount: votes.length
+      });
+
+      return votes;
+    } catch (error: any) {
+      logger.error('Error fetching Option 2 encrypted votes', {
+        error: error.message,
+        electionId
+      });
+      throw new Error(`Failed to fetch Option 2 encrypted votes: ${error.message}`);
     }
   }
 

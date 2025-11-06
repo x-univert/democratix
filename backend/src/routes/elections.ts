@@ -82,4 +82,151 @@ router.get(
   electionController.checkTransactionStatus
 );
 
+/**
+ * POST /api/elections/:id/setup-encryption
+ * Générer les clés ElGamal pour une élection (Option 1)
+ */
+router.post(
+  '/:id/setup-encryption',
+  validateParams(IdParamSchema),
+  electionController.setupElGamalEncryption
+);
+
+/**
+ * GET /api/elections/:id/public-key
+ * Récupérer la clé publique ElGamal d'une élection
+ */
+router.get(
+  '/:id/public-key',
+  validateParams(IdParamSchema),
+  electionController.getElGamalPublicKey
+);
+
+/**
+ * POST /api/elections/:id/decrypt-votes
+ * Déchiffrer les votes privés après clôture (organisateur seulement)
+ */
+router.post(
+  '/:id/decrypt-votes',
+  validateParams(IdParamSchema),
+  electionController.decryptPrivateVotes
+);
+
+/**
+ * POST /api/elections/:id/co-organizers
+ * Ajouter un co-organisateur à une élection
+ */
+router.post(
+  '/:id/co-organizers',
+  validateParams(IdParamSchema),
+  electionController.addCoOrganizer
+);
+
+/**
+ * DELETE /api/elections/:id/co-organizers
+ * Retirer un co-organisateur d'une élection
+ */
+router.delete(
+  '/:id/co-organizers',
+  validateParams(IdParamSchema),
+  electionController.removeCoOrganizer
+);
+
+/**
+ * GET /api/elections/:id/organizers
+ * Obtenir la liste des organisateurs (principal + co-organisateurs)
+ */
+router.get(
+  '/:id/organizers',
+  validateParams(IdParamSchema),
+  electionController.getElectionOrganizers
+);
+
+/**
+ * POST /api/elections/:id/notify
+ * Notifier d'un événement de transaction réussie (appelé par le frontend après confirmation)
+ */
+router.post(
+  '/:id/notify',
+  validateParams(IdParamSchema),
+  electionController.notifyTransactionEvent
+);
+
+/**
+ * POST /api/elections/:id/send-invitations-email
+ * Envoyer des invitations par email avec codes d'invitation
+ */
+router.post(
+  '/:id/send-invitations-email',
+  validateParams(IdParamSchema),
+  electionController.sendInvitationsByEmail
+);
+
+/**
+ * POST /api/elections/test-email
+ * Envoyer un email de test pour vérifier la configuration SendGrid
+ */
+router.post(
+  '/test-email',
+  electionController.sendTestEmail
+);
+
+/**
+ * POST /api/elections/:id/send-otp
+ * Envoyer un code OTP par SMS à un numéro de téléphone
+ */
+router.post(
+  '/:id/send-otp',
+  validateParams(IdParamSchema),
+  electionController.sendOTP
+);
+
+/**
+ * POST /api/elections/:id/verify-otp
+ * Vérifier un code OTP pour un numéro de téléphone
+ */
+router.post(
+  '/:id/verify-otp',
+  validateParams(IdParamSchema),
+  electionController.verifyOTP
+);
+
+/**
+ * POST /api/elections/:id/send-invitations-sms
+ * Envoyer des invitations par SMS en masse avec codes OTP
+ */
+router.post(
+  '/:id/send-invitations-sms',
+  validateParams(IdParamSchema),
+  electionController.sendInvitationsBySMS
+);
+
+/**
+ * POST /api/elections/test-sms
+ * Envoyer un SMS de test pour vérifier la configuration Twilio
+ */
+router.post(
+  '/test-sms',
+  electionController.sendTestSMS
+);
+
+/**
+ * GET /api/elections/stats/detailed
+ * Obtenir des statistiques détaillées pour le dashboard
+ */
+router.get(
+  '/stats/detailed',
+  electionController.getDetailedStats
+);
+
+/**
+ * GET /api/elections/:id/stats/votes-timeline
+ * Obtenir l'évolution des votes dans le temps pour une élection
+ */
+router.get(
+  '/:id/stats/votes-timeline',
+  validateParams(IdParamSchema),
+  electionController.getVotesTimeline
+);
+
 export default router;

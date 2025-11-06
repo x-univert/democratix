@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { retryIPFSOperation } from '../utils/retryWithBackoff';
 
 // ⚠️ IMPORTANT: Les clés API doivent être configurées dans le fichier .env
 // Ne JAMAIS commiter les clés API dans le code source!
@@ -57,62 +58,66 @@ export interface CandidateMetadata {
  */
 export class IPFSService {
   /**
-   * Upload un fichier JSON sur IPFS via Pinata
+   * Upload un fichier JSON sur IPFS via Pinata with automatic retry
    */
   async uploadJSON<T = any>(data: T, name?: string): Promise<string> {
-    try {
-      const response = await axios.post(
-        'https://api.pinata.cloud/pinning/pinJSONToIPFS',
-        {
-          pinataContent: data,
-          pinataMetadata: {
-            name: name || `democratix_${Date.now()}.json`,
-          },
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${PINATA_JWT}`,
-          },
-        }
-      );
+    const fileName = name || `democratix_${Date.now()}.json`;
 
-      return response.data.IpfsHash;
-    } catch (error) {
-      console.error('Erreur lors de l\'upload JSON sur IPFS:', error);
-      throw new Error('Impossible d\'uploader les données sur IPFS');
-    }
+    return retryIPFSOperation(
+      async () => {
+        const response = await axios.post(
+          'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+          {
+            pinataContent: data,
+            pinataMetadata: {
+              name: fileName,
+            },
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${PINATA_JWT}`,
+            },
+            timeout: 30000, // 30 seconds timeout
+          }
+        );
+
+        return response.data.IpfsHash;
+      },
+      `Upload JSON (${fileName})`
+    );
   }
 
   /**
-   * Upload un fichier (image, document, etc.) sur IPFS via Pinata
+   * Upload un fichier (image, document, etc.) sur IPFS via Pinata with automatic retry
    */
   async uploadFile(file: File): Promise<string> {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+    return retryIPFSOperation(
+      async () => {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      const metadata = JSON.stringify({
-        name: file.name,
-      });
-      formData.append('pinataMetadata', metadata);
+        const metadata = JSON.stringify({
+          name: file.name,
+        });
+        formData.append('pinataMetadata', metadata);
 
-      const response = await axios.post(
-        'https://api.pinata.cloud/pinning/pinFileToIPFS',
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: `Bearer ${PINATA_JWT}`,
-          },
-        }
-      );
+        const response = await axios.post(
+          'https://api.pinata.cloud/pinning/pinFileToIPFS',
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              Authorization: `Bearer ${PINATA_JWT}`,
+            },
+            timeout: 60000, // 60 seconds timeout for file uploads
+          }
+        );
 
-      return response.data.IpfsHash;
-    } catch (error) {
-      console.error('Erreur lors de l\'upload du fichier sur IPFS:', error);
-      throw new Error('Impossible d\'uploader le fichier sur IPFS');
-    }
+        return response.data.IpfsHash;
+      },
+      `Upload file (${file.name})`
+    );
   }
 
   /**

@@ -192,12 +192,13 @@ function decodeElection(hex: string, defaultId: number): Election {
     let requires_registration = false;
     let registered_voters_count = 0;
     let registration_deadline: number | null = null;
+    let encryption_type = 0; // Par défaut: pas de chiffrement
 
     console.log(`🔍 Election ${defaultId}: offset=${offset}, bytes.length=${bytes.length}, remaining=${bytes.length - offset}`);
 
     // Vérifier s'il reste des bytes à lire (nouvelle structure)
     if (offset < bytes.length) {
-      console.log(`✅ Election ${defaultId}: Reading new fields (requires_registration, registered_voters_count, registration_deadline)`);
+      console.log(`✅ Election ${defaultId}: Reading new fields (requires_registration, registered_voters_count, registration_deadline, encryption_type)`);
       // Requires registration (bool - 1 byte)
       requires_registration = bytes[offset] === 1;
       offset += 1;
@@ -219,6 +220,13 @@ function decodeElection(hex: string, defaultId: number): Election {
         }
       }
 
+      // Encryption type (u8 - 1 byte) - NOUVEAU
+      if (offset < bytes.length) {
+        encryption_type = bytes[offset];
+        offset += 1;
+        console.log(`✅ Election ${defaultId}: encryption_type=${encryption_type}`);
+      }
+
       console.log(`✅ Election ${defaultId}: requires_registration=${requires_registration}, registered_voters_count=${registered_voters_count}, registration_deadline=${registration_deadline}`);
     } else {
       console.log(`⚠️ Election ${defaultId}: Old format detected (no new fields)`);
@@ -236,7 +244,8 @@ function decodeElection(hex: string, defaultId: number): Election {
       total_votes,
       requires_registration,
       registered_voters_count,
-      registration_deadline
+      registration_deadline,
+      encryption_type
     };
   } catch (err) {
     console.error(`❌ Error decoding election ${defaultId}:`, err);
@@ -253,7 +262,8 @@ function decodeElection(hex: string, defaultId: number): Election {
       total_votes: 0,
       requires_registration: false,
       registered_voters_count: 0,
-      registration_deadline: null
+      registration_deadline: null,
+      encryption_type: 0
     };
   }
 }
