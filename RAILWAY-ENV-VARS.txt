@@ -35,11 +35,11 @@ NODE_ENV=production
 CORS_ORIGIN=https://VOTRE-APP.vercel.app
 FRONTEND_URL=https://VOTRE-APP.vercel.app
 
-# SendGrid (Email - OPTIONNEL)
-# Décommentez et remplissez si vous voulez les notifications email
-# SENDGRID_API_KEY=votre_clé_sendgrid
-# SENDGRID_FROM_EMAIL=votre_email@exemple.com
-# SENDGRID_TEMPLATE_ID=d-votre_template_id
+# SendGrid (Email) - ⚠️ REMPLACEZ PAR VOS VRAIES VALEURS!
+SENDGRID_API_KEY=SG.VOTRE_CLE_SENDGRID_ICI
+SENDGRID_FROM_EMAIL=votre_email@exemple.com
+SENDGRID_FROM_NAME=DEMOCRATIX
+SENDGRID_INVITATION_TEMPLATE_ID=d-VOTRE_TEMPLATE_ID
 
 =================================================================
 TOTAL: 13 VARIABLES (11 obligatoires + 2 CORS à personnaliser)

@@ -53,10 +53,17 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Initialize services and start server
 async function startServer() {
   try {
-    // Initialiser le service zk-SNARK
+    // Initialiser le service zk-SNARK (optionnel en production)
     logger.info('🔐 Initializing zk-SNARK verifier...');
-    await zkVerifier.initialize();
-    logger.info('✅ zk-SNARK verifier initialized successfully');
+    try {
+      await zkVerifier.initialize();
+      logger.info('✅ zk-SNARK verifier initialized successfully');
+    } catch (zkError: any) {
+      logger.warn('⚠️  zk-SNARK verifier not available (circuits not found)');
+      logger.warn('⚠️  Private voting with zk-proofs will be disabled');
+      logger.warn(`⚠️  Error: ${zkError.message}`);
+      // Continue server startup without zk-SNARK
+    }
 
     // Initialiser le service WebSocket
     logger.info('🔌 Initializing WebSocket service...');
@@ -68,7 +75,7 @@ async function startServer() {
       logger.info(`🚀 DEMOCRATIX Backend démarré sur le port ${PORT}`);
       logger.info(`📊 Environnement: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`⛓️  Réseau MultiversX: ${process.env.MULTIVERSX_NETWORK}`);
-      logger.info(`🔐 zk-SNARK endpoints: /api/zk/*`);
+      logger.info(`🔐 zk-SNARK endpoints: /api/zk/* (may be disabled)`);
       logger.info(`🔌 WebSocket available on ws://localhost:${PORT}`);
     });
   } catch (error) {
