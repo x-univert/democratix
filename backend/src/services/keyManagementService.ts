@@ -12,6 +12,7 @@ import { promisify } from 'util';
 import { logger } from '../utils/logger';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { pinataService } from './pinataService';
 
 const scryptAsync = promisify(scrypt);
 
@@ -156,22 +157,58 @@ export class KeyManagementService {
   }
 
   /**
-   * Stocke une clé privée chiffrée sur disque
+   * Stocke une clé privée chiffrée sur disque et IPFS (backup)
    *
    * @param electionId - ID de l'élection
    * @param encryptedData - Données de clé chiffrée
+   * @returns Hash IPFS du backup (ou undefined si échec)
    */
-  async storeEncryptedKey(electionId: number, encryptedData: EncryptedKeyData): Promise<void> {
+  async storeEncryptedKey(
+    electionId: number,
+    encryptedData: EncryptedKeyData
+  ): Promise<{ localPath: string; ipfsHash?: string }> {
     try {
-      const filePath = path.join(KEYS_DIR, `election-${electionId}-key.json`);
+      // 1. Sauvegarde locale (Railway Volume)
+      const fileName = `election-${electionId}-key.json`;
+      const filePath = path.join(KEYS_DIR, fileName);
+
       await fs.writeFile(filePath, JSON.stringify(encryptedData, null, 2), {
         mode: 0o600 // Lecture/écriture propriétaire uniquement
       });
 
-      logger.info('✅ Encrypted private key stored', {
+      logger.info('✅ Encrypted private key stored locally', {
         electionId,
-        filePath: filePath.substring(filePath.length - 30)
+        filePath: filePath.replace(process.cwd(), '')
       });
+
+      // 2. Backup IPFS (optionnel mais recommandé)
+      let ipfsHash: string | undefined;
+      try {
+        const buffer = Buffer.from(JSON.stringify(encryptedData));
+        const result = await pinataService.uploadBuffer(
+          buffer,
+          `election-${electionId}-key-backup.json`,
+          { electionId: electionId.toString(), type: 'elgamal-key-backup' }
+        );
+        ipfsHash = result.IpfsHash;
+
+        logger.info('✅ Encrypted key backed up to IPFS', {
+          electionId,
+          ipfsHash,
+          url: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
+        });
+
+        // Sauvegarder le hash IPFS dans les métadonnées
+        await this.saveIPFSBackupHash(electionId, ipfsHash);
+      } catch (ipfsError: any) {
+        logger.warn('⚠️  IPFS backup failed (continuing without backup)', {
+          electionId,
+          error: ipfsError.message
+        });
+        // Continue sans bloquer si IPFS échoue
+      }
+
+      return { localPath: filePath, ipfsHash };
     } catch (error) {
       logger.error('❌ Failed to store encrypted key', { error, electionId });
       throw new Error('Failed to store encrypted key');
@@ -179,26 +216,63 @@ export class KeyManagementService {
   }
 
   /**
-   * Récupère une clé privée chiffrée depuis le disque
+   * Récupère une clé privée chiffrée (local d'abord, puis IPFS backup si nécessaire)
    *
    * @param electionId - ID de l'élection
    * @returns Données de clé chiffrée
    */
   async retrieveEncryptedKey(electionId: number): Promise<EncryptedKeyData | null> {
+    const filePath = path.join(KEYS_DIR, `election-${electionId}-key.json`);
+
+    // 1. Essayer local d'abord (le plus rapide)
     try {
-      const filePath = path.join(KEYS_DIR, `election-${electionId}-key.json`);
       const data = await fs.readFile(filePath, 'utf-8');
-
-      logger.debug('✅ Encrypted key retrieved', { electionId });
-
+      logger.debug('✅ Encrypted key retrieved from local storage', { electionId });
       return JSON.parse(data);
-    } catch (error: any) {
-      if (error.code === 'ENOENT') {
-        logger.warn('No encrypted key found for election', { electionId });
+    } catch (localError: any) {
+      if (localError.code !== 'ENOENT') {
+        logger.error('❌ Failed to read local encrypted key', { error: localError, electionId });
+        throw new Error('Failed to read encrypted key');
+      }
+
+      logger.warn('⚠️  Local key not found, trying IPFS backup...', { electionId });
+    }
+
+    // 2. Fallback: Essayer IPFS backup
+    try {
+      const ipfsHash = await this.getIPFSBackupHash(electionId);
+
+      if (!ipfsHash) {
+        logger.warn('No IPFS backup hash found for election', { electionId });
         return null;
       }
-      logger.error('❌ Failed to retrieve encrypted key', { error, electionId });
-      throw new Error('Failed to retrieve encrypted key');
+
+      logger.info('🔄 Restoring key from IPFS backup...', { electionId, ipfsHash });
+
+      // Télécharger depuis IPFS
+      const response = await fetch(`https://gateway.pinata.cloud/ipfs/${ipfsHash}`);
+
+      if (!response.ok) {
+        throw new Error(`IPFS fetch failed: ${response.statusText}`);
+      }
+
+      const keyData: EncryptedKeyData = await response.json();
+
+      // Sauvegarder localement pour cache
+      await fs.writeFile(filePath, JSON.stringify(keyData, null, 2), { mode: 0o600 });
+
+      logger.info('✅ Key restored from IPFS backup and cached locally', {
+        electionId,
+        ipfsHash
+      });
+
+      return keyData;
+    } catch (ipfsError: any) {
+      logger.error('❌ Failed to restore key from IPFS', {
+        electionId,
+        error: ipfsError.message
+      });
+      return null;
     }
   }
 
@@ -311,6 +385,75 @@ export class KeyManagementService {
       logger.error('❌ Key encryption test failed:', error);
       return false;
     }
+  }
+
+  /**
+   * Sauvegarde le hash IPFS du backup dans les métadonnées
+   * @private
+   */
+  private async saveIPFSBackupHash(electionId: number, ipfsHash: string): Promise<void> {
+    try {
+      const metadataPath = path.join(KEYS_DIR, 'ipfs-metadata.json');
+      let metadata: Record<number, { ipfsHash: string; createdAt: string }> = {};
+
+      // Charger métadonnées existantes
+      try {
+        const data = await fs.readFile(metadataPath, 'utf-8');
+        metadata = JSON.parse(data);
+      } catch (e) {
+        // Fichier n'existe pas encore
+      }
+
+      // Ajouter/mettre à jour
+      metadata[electionId] = {
+        ipfsHash,
+        createdAt: new Date().toISOString()
+      };
+
+      // Sauvegarder
+      await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
+
+      logger.debug('✅ IPFS backup hash saved to metadata', { electionId, ipfsHash });
+    } catch (error) {
+      logger.error('Failed to save IPFS backup hash', { error, electionId });
+      // Ne pas bloquer si échec (backup secondaire)
+    }
+  }
+
+  /**
+   * Récupère le hash IPFS du backup depuis les métadonnées
+   * @private
+   */
+  private async getIPFSBackupHash(electionId: number): Promise<string | undefined> {
+    try {
+      const metadataPath = path.join(KEYS_DIR, 'ipfs-metadata.json');
+      const data = await fs.readFile(metadataPath, 'utf-8');
+      const metadata: Record<number, { ipfsHash: string; createdAt: string }> = JSON.parse(data);
+      return metadata[electionId]?.ipfsHash;
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  /**
+   * Obtient les informations de backup IPFS pour une élection
+   * @public
+   */
+  async getBackupInfo(electionId: number): Promise<{
+    hasLocal: boolean;
+    hasIPFS: boolean;
+    ipfsHash?: string;
+    ipfsUrl?: string;
+  }> {
+    const hasLocal = await this.hasPrivateKey(electionId);
+    const ipfsHash = await this.getIPFSBackupHash(electionId);
+
+    return {
+      hasLocal,
+      hasIPFS: !!ipfsHash,
+      ipfsHash,
+      ipfsUrl: ipfsHash ? `https://gateway.pinata.cloud/ipfs/${ipfsHash}` : undefined
+    };
   }
 }
 

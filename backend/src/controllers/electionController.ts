@@ -417,13 +417,18 @@ export class ElectionController {
         sender: organizerAddress
       });
 
-      // 🔒 SÉCURITÉ: Stocker la clé privée de manière chiffrée
-      await keyManagementService.securelyStorePrivateKey(electionId, keys.privateKey);
+      // 🔒 SÉCURITÉ: Stocker la clé privée de manière chiffrée (avec backup IPFS)
+      const encryptedData = await keyManagementService.encryptPrivateKey(keys.privateKey);
+      const backupResult = await keyManagementService.storeEncryptedKey(electionId, encryptedData);
+
+      // Obtenir les informations de backup
+      const backupInfo = await keyManagementService.getBackupInfo(electionId);
 
       logger.info('ElGamal keys generated and transaction prepared', {
         electionId,
         publicKey: keys.publicKey.slice(0, 10) + '...',
-        privateKeyStored: '🔒 encrypted'
+        privateKeyStored: '🔒 encrypted',
+        ipfsBackup: backupInfo.hasIPFS ? '✅ backed up' : '⚠️  no backup'
       });
 
       // ⚠️ IMPORTANT: La clé privée est retournée UNE SEULE FOIS ici
@@ -431,14 +436,22 @@ export class ElectionController {
       // Elle ne sera PLUS JAMAIS accessible via l'API
       res.status(200).json({
         success: true,
-        message: 'ElGamal encryption setup successfully. IMPORTANT: Download and securely store your private key. It will not be accessible again via API.',
+        message: backupInfo.hasIPFS
+          ? 'ElGamal encryption setup successfully. Private key stored locally AND backed up on IPFS. IMPORTANT: Download and securely store your private key.'
+          : 'ElGamal encryption setup successfully. Private key stored locally (IPFS backup failed). IMPORTANT: Download and securely store your private key.',
         data: {
           electionId,
           publicKey: keys.publicKey,
           privateKey: keys.privateKey, // ⚠️ Retourné UNE SEULE FOIS - À télécharger immédiatement
           privateKeyWarning: 'CRITICAL: Save this private key securely. You will need it to decrypt votes after election closure. It cannot be recovered if lost.',
           metadata,
-          transaction // Transaction à signer par l'organisateur
+          transaction, // Transaction à signer par l'organisateur
+          backup: {
+            local: backupInfo.hasLocal,
+            ipfs: backupInfo.hasIPFS,
+            ipfsHash: backupInfo.ipfsHash,
+            ipfsUrl: backupInfo.ipfsUrl
+          }
         },
       });
     } catch (error: any) {
