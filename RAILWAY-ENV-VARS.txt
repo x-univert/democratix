@@ -1,0 +1,92 @@
+=================================================================
+VARIABLES D'ENVIRONNEMENT RAILWAY - DEMOCRATIX Backend
+=================================================================
+
+INSTRUCTIONS:
+1. Allez sur Railway Dashboard > Votre Service Backend > Variables
+2. Pour chaque variable ci-dessous, cliquez sur "New Variable"
+3. Copiez le NOM exactement (Raw Editor permet de copier tout d'un coup)
+4. Copiez la VALEUR exactement
+5. Cliquez "Add" après chaque variable
+
+ASTUCE RAPIDE:
+Railway a un "Raw Editor" qui permet de coller toutes les variables d'un coup!
+Cliquez sur "Raw Editor" et collez tout le bloc ci-dessous.
+
+=================================================================
+
+# MultiversX Blockchain
+MULTIVERSX_API_URL=https://devnet-api.multiversx.com
+MULTIVERSX_GATEWAY_URL=https://devnet-gateway.multiversx.com
+VOTING_CONTRACT=erd1qqqqqqqqqqqqqpgq3rdh76wraer3vd36awamzfe0f8cxs0s8d3qqf5h6tl
+VOTER_REGISTRY_CONTRACT=erd1qqqqqqqqqqqqqpgqu6z244pwew5ep7r0mv59aa2snm80pgv6d3qqce2mtu
+RESULTS_CONTRACT=erd1qqqqqqqqqqqqqpgqk3pxj5l8px3cvv8a26jh0fwtw4mqh7u0d3qq8p9pnr
+
+# IPFS / Pinata
+PINATA_API_KEY=582556ecae27aec7767f
+PINATA_SECRET_API_KEY=a269c8791384c64e19ba45451bec2b76d17c5ce39af798a550e82aefdd7e4cb6
+PINATA_JWT=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIwNTllZTNkMi0yM2YxLTRhZDctODliYi0zOGY2OWE4MzIzZDAiLCJlbWFpbCI6IngtdW5pdmVydEBwcm90b25tYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI1ODI1NTZlY2FlMjdhZWM3NzY3ZiIsInNjb3BlZEtleVNlY3JldCI6ImEyNjljODc5MTM4NGM2NGUxOWJhNDU0NTFiZWMyYjc2ZDE3YzVjZTM5YWY3OThhNTUwZTgyYWVmZGQ3ZTRjYjYiLCJleHAiOjE3OTMwMjY1MzZ9.Pdu2DApzT4-cax_AEc86QN2hIHkf-dZbJh6NqTU8cLM
+
+# Serveur
+PORT=3003
+NODE_ENV=production
+
+# CORS & Frontend - ⚠️ IMPORTANT: REMPLACEZ PAR VOTRE VRAIE URL VERCEL!
+CORS_ORIGIN=https://VOTRE-APP.vercel.app
+FRONTEND_URL=https://VOTRE-APP.vercel.app
+
+# SendGrid (Email - OPTIONNEL)
+# Décommentez et remplissez si vous voulez les notifications email
+# SENDGRID_API_KEY=votre_clé_sendgrid
+# SENDGRID_FROM_EMAIL=votre_email@exemple.com
+# SENDGRID_TEMPLATE_ID=d-votre_template_id
+
+=================================================================
+TOTAL: 13 VARIABLES (11 obligatoires + 2 CORS à personnaliser)
+=================================================================
+
+⚠️ ACTIONS APRÈS AVOIR AJOUTÉ LES VARIABLES:
+
+1. MODIFIER LES URLS CORS:
+   - Trouvez CORS_ORIGIN et FRONTEND_URL
+   - Remplacez "VOTRE-APP.vercel.app" par votre vraie URL Vercel
+   - Exemple: https://democratix-abc123.vercel.app
+   - PAS de slash "/" à la fin!
+
+2. GÉNÉRER UN DOMAINE PUBLIC:
+   - Railway > Settings > Networking > Generate Domain
+   - Copiez l'URL générée (ex: democratix-backend.up.railway.app)
+
+3. METTRE À JOUR VERCEL:
+   - Vercel Dashboard > Votre projet > Settings > Environment Variables
+   - Trouvez VITE_BACKEND_API_URL
+   - Changez de "http://localhost:3003" vers votre URL Railway
+   - Exemple: https://democratix-backend.up.railway.app
+   - Sauvegardez et redéployez!
+
+4. VÉRIFIER LE DÉPLOIEMENT:
+   - Railway > Deployments > Voir les logs
+   - Cherchez "Server running on port 3003"
+   - Testez: curl https://VOTRE-URL-RAILWAY.up.railway.app/health
+
+=================================================================
+
+TROUBLESHOOTING RAPIDE:
+
+❌ "Application failed to respond"
+   → Vérifiez les logs Railway
+   → Vérifiez que PORT=3003 est présent
+
+❌ Erreurs CORS dans le navigateur
+   → Vérifiez CORS_ORIGIN = URL Vercel exacte
+   → Pas d'espace, pas de slash final
+
+❌ WebSocket ne connecte pas
+   → Le client doit utiliser wss:// (pas ws://)
+   → Vérifiez l'URL backend dans le frontend
+
+❌ Build échoue
+   → Vérifiez Root Directory = "backend"
+   → Regardez les logs pour l'erreur exacte
+
+=================================================================
