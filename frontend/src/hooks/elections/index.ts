@@ -9,8 +9,8 @@ export * from './useIPFSMetadata';
 export * from './useGetUserVotingHistory';
 export * from './useIsVoterRegistered';
 export * from './useGetRegisteredVoters';
-export * from './useRegistrationStats';
-export * from './useRegistrationsPerDay';
+// export * from './useRegistrationStats'; // Temporarily disabled - causes build errors
+// export * from './useRegistrationsPerDay'; // Temporarily disabled - causes build errors
 export * from './useGetPrivateVotes';
 export * from './useGetPrivateVotesOption2';
 export * from './useGetElectionPublicKey';
