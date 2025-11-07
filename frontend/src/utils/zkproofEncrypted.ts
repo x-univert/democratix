@@ -98,12 +98,14 @@ export async function generateEncryptedVoteProof(
     console.log('✅ c1 calculé (ElGamal réel):', c1Hex.substring(0, 20) + '...');
 
     // c2 = r × pk + encodedCandidateId × G (vrai point ElGamal)
-    // Note: Les candidats dans le smart contract ont des IDs 1-indexed (1, 2, 3...)
-    // Le circuit attend des IDs 0-indexed (0, 1, 2...) pour la comparaison avec numCandidates
-    // Donc on convertit: candidateId 1 → 0, candidateId 2 → 1, etc.
-    const mappedCandidateId = inputs.candidateId - 1; // Convertir 1-indexed → 0-indexed (1→0, 2→1, 3→2)
-    // Pour ElGamal, on ajoute 1 pour éviter la multiplication par 0
-    const encodedCandidateId = BigInt(mappedCandidateId + 1); // 0→1, 1→2, 2→3 (pour ElGamal)
+    // IMPORTANT: Pour ElGamal, on encode simplement candidateId + 1 (évite multiplication par 0)
+    // Cela DOIT être identique à Option 1 (elgamal.ts) pour que le déchiffrement backend fonctionne !
+    // Candidat ID 1 → encode 2, Candidat ID 2 → encode 3, etc.
+    const encodedCandidateId = BigInt(inputs.candidateId + 1);
+
+    // Pour le circuit zk-SNARK, on utilise candidateId - 1 (0-indexed)
+    // Car le circuit vérifie candidateId < numCandidates avec des IDs 0-indexed
+    const mappedCandidateId = inputs.candidateId - 1; // 1→0, 2→1 (pour le circuit uniquement)
 
     // Debug: vérifier le mapping des IDs
     console.log('🔍 Mapping candidat ID:', {
