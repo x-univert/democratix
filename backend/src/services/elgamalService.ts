@@ -180,14 +180,13 @@ export class ElGamalService {
       for (let i = 0; i < votes.length; i++) {
         try {
           const vote = votes[i];
-          const candidateIdCircuit = this.decrypt(vote.c1, vote.c2, privateKey);
+          const candidateId = this.decrypt(vote.c1, vote.c2, privateKey);
 
-          // Remap du circuit (-1, 0, 1...) vers onChain (1, 2, 3...)
-          // Smart contract expects 1-indexed candidate IDs (id > 0)
-          const candidateIdOnChain = candidateIdCircuit + 2;
+          // decrypt() returns smart contract ID directly (1-indexed)
+          // No remapping needed - candidateId is already 1, 2, 3...
 
           // Incrémenter le compteur pour ce candidat
-          results[candidateIdOnChain] = (results[candidateIdOnChain] || 0) + 1;
+          results[candidateId] = (results[candidateId] || 0) + 1;
           successfulDecryptions++;
 
           // Log progress tous les 100 votes
