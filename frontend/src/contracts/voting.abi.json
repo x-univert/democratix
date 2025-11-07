@@ -556,8 +556,13 @@
         },
         {
             "docs": [
-                "Finalise une élection fermée (changement de statut Closed -> Finalized)",
-                "Cette fonction marque les résultats comme officiellement publiés et immuables"
+                "Finalise une élection fermée avec les résultats finaux",
+                "Cette fonction stocke les résultats on-chain de manière immuable et optionnellement le hash IPFS",
+                "",
+                "# Arguments",
+                "* `election_id` - ID de l'élection",
+                "* `results_ipfs_hash` - Hash IPFS des résultats détaillés (vide si pas d'IPFS)",
+                "* `results` - Vec de CandidateResult (candidate_id, vote_count) - DOIT ÊTRE EN DERNIER"
             ],
             "name": "finalizeElection",
             "mutability": "mutable",
@@ -565,9 +570,56 @@
                 {
                     "name": "election_id",
                     "type": "u64"
+                },
+                {
+                    "name": "results_ipfs_hash",
+                    "type": "bytes"
+                },
+                {
+                    "name": "results",
+                    "type": "variadic<multi<u32,u64>>",
+                    "multi_arg": true
                 }
             ],
             "outputs": []
+        },
+        {
+            "docs": [
+                "Récupère les résultats finaux on-chain d'une élection finalisée"
+            ],
+            "name": "getFinalResults",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "variadic<multi<u32,u64>>",
+                    "multi_result": true
+                }
+            ]
+        },
+        {
+            "docs": [
+                "Récupère le hash IPFS des résultats détaillés"
+            ],
+            "name": "getResultsIpfsHash",
+            "mutability": "readonly",
+            "inputs": [
+                {
+                    "name": "election_id",
+                    "type": "u64"
+                }
+            ],
+            "outputs": [
+                {
+                    "type": "optional<bytes>",
+                    "multi_result": true
+                }
+            ]
         },
         {
             "docs": [
