@@ -97,25 +97,31 @@ export async function generateEncryptedVoteProof(
     const c1Hex = c1Point.toHex(true); // Compressed format (33 bytes = 66 hex chars)
     console.log('✅ c1 calculé (ElGamal réel):', c1Hex.substring(0, 20) + '...');
 
-    // c2 = r × pk + (candidateId + 1) × G (vrai point ElGamal)
-    // Note: Pour éviter la multiplication par 0, on mappe candidateId -1 → 0 AVANT d'ajouter 1
-    // Mapping: -1 → 0, 0 → 1, 1 → 2, etc.
-    // Puis on ajoute 1: 0 → 1, 1 → 2, 2 → 3, etc.
-    const mappedCandidateId = inputs.candidateId + 1; // -1 devient 0, 0 devient 1, etc.
-    const encodedCandidateId = BigInt(mappedCandidateId + 1); // +1 pour ElGamal (éviter 0)
+    // c2 = r × pk + encodedCandidateId × G (vrai point ElGamal)
+    // Note: Les candidats dans le smart contract ont des IDs 1-indexed (1, 2, 3...)
+    // Le circuit attend des IDs 0-indexed (0, 1, 2...) pour la comparaison avec numCandidates
+    // Donc on convertit: candidateId 1 → 0, candidateId 2 → 1, etc.
+    const mappedCandidateId = inputs.candidateId - 1; // Convertir 1-indexed → 0-indexed (1→0, 2→1, 3→2)
+    // Pour ElGamal, on ajoute 1 pour éviter la multiplication par 0
+    const encodedCandidateId = BigInt(mappedCandidateId + 1); // 0→1, 1→2, 2→3 (pour ElGamal)
+
+    // Debug: vérifier le mapping des IDs
+    console.log('🔍 Mapping candidat ID:', {
+      originalCandidateId: inputs.candidateId,
+      mappedCandidateId, // Pour le circuit (0-indexed)
+      encodedCandidateId: encodedCandidateId.toString(), // Pour ElGamal (+1)
+      numCandidates: inputs.numCandidates,
+      valid: mappedCandidateId < inputs.numCandidates ? '✅' : '❌'
+    });
 
     // Debug: vérifier les valeurs avant multiplication
     const secp256k1_n = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
     const rIsValid = inputs.r < secp256k1_n;
 
-    console.log('🔍 Debug AVANT multiplication:', {
+    console.log('🔍 Debug randomness:', {
       r: inputs.r.toString().substring(0, 50) + '...',
       rType: typeof inputs.r,
-      rLength: inputs.r.toString().length,
-      rIsValid,
-      secp256k1_nLength: secp256k1_n.toString().length,
-      encodedCandidateId: encodedCandidateId.toString(),
-      encodedCandidateIdType: typeof encodedCandidateId
+      rIsValid
     });
 
     if (!rIsValid) {
