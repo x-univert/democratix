@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useGetAccount, useGetNetworkConfig } from 'lib';
 import { votingContract } from 'config';
-import { useGetElection, type Election, useElectionMetadata, useIPFSImage, useCandidateMetadata, useHasVoted, useHasVotedPrivately, useIsCoOrganizer } from '../../hooks/elections';
+import { useGetElection, type Election, useElectionMetadata, useIPFSImage, useCandidateMetadata, useHasVoted, useHasVotedPrivately, useIsCoOrganizer, useGetFinalResults } from '../../hooks/elections';
 import { useGetCandidates, type Candidate } from '../../hooks/elections/useGetCandidates';
 import { useGetCandidateVotes } from '../../hooks/elections/useGetCandidateVotes';
 import { useGetRegisteredVoters } from '../../hooks/elections/useGetRegisteredVoters';
