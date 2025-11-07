@@ -1389,11 +1389,11 @@ export const ElectionDetail = () => {
                     <span>{t('results.elgamal.decryptButton') || 'Déchiffrer les votes'}</span>
                   </button>
                 </div>
-                <div className="mt-4 bg-white bg-opacity-10 rounded-lg p-4">
+                <div className="mt-4 bg-white rounded-lg p-4">
                   <div className="flex items-start gap-2">
                     <span className="text-xl">ℹ️</span>
-                    <p className="text-white text-opacity-90 text-sm">
-                      {t('results.elgamal.info') || 'Les votes chiffrés avec ElGamal nécessitent la clé privée pour être déchiffrés. Seul l\'organisateur principal ou les co-organisateurs autorisés peuvent effectuer cette opération.'}
+                    <p className="text-gray-800 text-sm">
+                      {t('results.elgamal.info') || 'En tant qu\'organisateur, vous pouvez déchiffrer les votes ElGamal en utilisant la clé privée que vous avez téléchargée lors de la configuration. Le déchiffrement révélera le nombre de votes pour chaque candidat tout en préservant l\'anonymat des électeurs.'}
                     </p>
                   </div>
                 </div>
