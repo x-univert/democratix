@@ -36,16 +36,24 @@ export const useGetFinalResults = () => {
 
       const resultsData = await resultsResponse.json();
 
+      console.log('🔍 Raw results response:', resultsData);
+
       if (!resultsData.data?.data?.returnData || resultsData.data.data.returnData.length === 0) {
         console.log('⚠️ No final results found on blockchain');
         return null;
       }
 
+      console.log('📊 returnData length:', resultsData.data.data.returnData.length);
+      console.log('📊 returnData:', resultsData.data.data.returnData);
+
       // Décoder les résultats (chaque élément est un tuple (u32, u64))
       const results: FinalResult[] = [];
-      for (const resultBase64 of resultsData.data.data.returnData) {
+      for (let i = 0; i < resultsData.data.data.returnData.length; i++) {
+        const resultBase64 = resultsData.data.data.returnData[i];
         const resultHex = base64ToHex(resultBase64);
-        const result = decodeResult(resultHex);
+        console.log(`🔍 Result ${i}: base64="${resultBase64}", hex="${resultHex}"`);
+        const result = decodeResult(resultHex, i);
+        console.log(`✅ Decoded result ${i}:`, result);
         results.push(result);
       }
 
@@ -140,13 +148,16 @@ function bytesToString(bytes: number[]): string {
   }
 }
 
-function decodeResult(hex: string): FinalResult {
+function decodeResult(hex: string, index: number): FinalResult {
   try {
     const bytes = hexToBytes(hex);
+    console.log(`  📦 Result ${index} bytes (${bytes.length} total):`, bytes);
     let offset = 0;
 
     // candidate_id (u32 - 4 bytes)
-    const candidate_id = bytesToNumber(bytes.slice(offset, offset + 4));
+    const candidateIdBytes = bytes.slice(offset, offset + 4);
+    const candidate_id = bytesToNumber(candidateIdBytes);
+    console.log(`  🆔 Candidate ID bytes:`, candidateIdBytes, `→ ${candidate_id}`);
     offset += 4;
 
     // vote_count (u64 - 8 bytes)
@@ -155,6 +166,7 @@ function decodeResult(hex: string): FinalResult {
     for (let i = 0; i < voteCountBytes.length; i++) {
       vote_count = vote_count * 256 + voteCountBytes[i];
     }
+    console.log(`  📊 Vote count bytes:`, voteCountBytes, `→ ${vote_count}`);
 
     return { candidate_id, vote_count };
   } catch (err) {

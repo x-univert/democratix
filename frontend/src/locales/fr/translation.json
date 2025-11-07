@@ -522,6 +522,8 @@
     "shareOn": "Partager sur {{platform}}",
     "shareText": "📊 Résultats de \"{{title}}\": {{name}} remporte l'élection avec {{percentage}}% des voix! 🎉",
     "shareTextNoWinner": "📊 Découvrez les résultats de l'élection \"{{title}}\" sur DEMOCRATIX",
+    "finalized": "Résultats finalisés",
+    "viewOnIpfs": "Voir sur IPFS",
     "stats": {
       "totalVotes": "Votes totaux",
       "totalVote": "Vote total",
