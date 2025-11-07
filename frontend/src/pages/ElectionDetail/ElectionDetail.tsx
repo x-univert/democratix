@@ -609,17 +609,23 @@ export const ElectionDetail = () => {
     if (!election) return;
     setShowFinalizeModal(false);
     try {
-      const result = await finalizeElection(election.id);
+      // Passer les votes ElGamal déchiffrés si disponibles
+      const result = await finalizeElection(election.id, elgamalDecryptedVotes || undefined);
       if (result && result.transactionHash) {
         setFinalizeTxHash(result.transactionHash);
         setShowFinalizeTransactionModal(true);
+
+        // Afficher le lien IPFS si disponible
+        if (result.ipfsHash) {
+          console.log('📊 Results stored on IPFS:', result.ipfsUrl);
+        }
       } else {
         // Fallback if no transaction hash
         setTimeout(() => window.location.reload(), 2000);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la finalisation:', err);
-      alert(t('electionDetail.errors.finalizeError'));
+      alert(t('electionDetail.errors.finalizeError') + '\n' + (err.message || ''));
     }
   };
 
