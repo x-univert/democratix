@@ -18,6 +18,7 @@ export {
   TransactionComputer,
   TransactionsFactoryConfig,
   TransferTransactionsFactory,
+  U32Value,
   U64Value,
   UserSecretKey,
   UserSigner
