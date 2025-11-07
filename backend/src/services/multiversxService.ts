@@ -35,6 +35,9 @@ export interface ElectionData {
   status: string;
   total_votes: number;
   encryption_type?: number; // 0=none, 1=elgamal, 2=elgamal+zksnark
+  requires_registration?: boolean;
+  registered_voters_count?: number;
+  registration_deadline?: number | null;
 }
 
 /**

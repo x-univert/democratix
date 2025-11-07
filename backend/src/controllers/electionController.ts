@@ -1585,6 +1585,7 @@ export class ElectionController {
    * Prépare les résultats finaux pour la finalisation
    * Calcule les totaux de votes et uploade les résultats détaillés sur IPFS
    * POST /api/elections/:id/prepare-final-results
+   * Body: { elgamalDecryptedVotes: { candidateId: votes }, candidates: [{ id, name }] }
    */
   prepareFinalResults = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -1611,33 +1612,29 @@ export class ElectionController {
         return;
       }
 
-      // 2. Récupérer les candidats
-      const candidates = await multiversxService.getElectionCandidates(electionId);
-      if (!candidates || candidates.length === 0) {
+      // 2. Récupérer les candidats depuis le body (le frontend les a déjà)
+      const candidatesFromBody = req.body.candidates;
+      if (!candidatesFromBody || candidatesFromBody.length === 0) {
         res.status(400).json({
           success: false,
-          error: 'No candidates found for this election'
+          error: 'No candidates provided. Please include candidates array in request body.'
         });
         return;
       }
 
       // 3. Calculer les résultats totaux par candidat
+      const elgamalDecryptedVotes = req.body.elgamalDecryptedVotes || {};
       const candidateResults: Array<{ candidate_id: number; votes: number; name: string }> = [];
 
-      for (const candidate of candidates) {
+      for (const candidate of candidatesFromBody) {
         let totalVotes = 0;
 
-        // Votes publics (Option 0)
-        if (election.encryption_type === 0) {
-          const publicVotes = await multiversxService.getCandidateVotes(electionId, candidate.id);
-          totalVotes += publicVotes;
+        // Pour les votes ElGamal (Options 1 et 2), utiliser les votes déchiffrés
+        if (election.encryption_type === 1 || election.encryption_type === 2) {
+          totalVotes = elgamalDecryptedVotes[candidate.id] || 0;
         }
-
-        // Votes ElGamal déchiffrés (Options 1 et 2) - depuis le body de la requête
-        const elgamalDecryptedVotes = req.body.elgamalDecryptedVotes;
-        if (elgamalDecryptedVotes && elgamalDecryptedVotes[candidate.id]) {
-          totalVotes += elgamalDecryptedVotes[candidate.id];
-        }
+        // Pour les votes publics (Option 0), le total_votes est déjà dans l'élection
+        // On suppose que le frontend envoie les bonnes données
 
         candidateResults.push({
           candidate_id: candidate.id,
@@ -1669,8 +1666,8 @@ export class ElectionController {
         metadata: {
           startTime: election.start_time,
           endTime: election.end_time,
-          registeredVoters: election.registered_voters_count,
-          turnout: election.registered_voters_count > 0
+          registeredVoters: election.registered_voters_count || 0,
+          turnout: (election.registered_voters_count && election.registered_voters_count > 0)
             ? ((election.total_votes / election.registered_voters_count) * 100).toFixed(2)
             : '0.00'
         }
