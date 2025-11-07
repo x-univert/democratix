@@ -3,7 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RouteNamesEnum } from 'localConstants';
 import { useRegisterWithCode } from 'hooks/transactions';
-import { useGetElection, useIsVoterRegistered, type Election } from 'hooks/elections';
+import { useGetElection, useIsVoterRegistered, useElectionMetadata, type Election } from 'hooks/elections';
 import { TransactionProgressModal } from 'components';
 import { useGetAccount, useGetNetworkConfig } from 'lib';
 
@@ -25,6 +25,9 @@ export const Register = () => {
   const { getElection } = useGetElection();
   const { isVoterRegistered } = useIsVoterRegistered();
   const { registerWithCode } = useRegisterWithCode();
+
+  // Charger les métadonnées depuis IPFS (titre, description, etc.)
+  const { metadata: electionMetadata, loading: metadataLoading } = useElectionMetadata(election?.description_ipfs || null);
 
   // Local state
   const [election, setElection] = useState<Election | null>(null);
@@ -257,11 +260,23 @@ export const Register = () => {
           <div className="space-y-3">
             <div>
               <span className="text-black text-sm">{t('register.electionName', 'Nom')} :</span>
-              <p className="text-black font-semibold">{election.name}</p>
+              <p className="text-black font-semibold">
+                {metadataLoading ? (
+                  <span className="animate-pulse">Chargement...</span>
+                ) : (
+                  electionMetadata?.title || election.title || 'Sans titre'
+                )}
+              </p>
             </div>
             <div>
               <span className="text-black text-sm">{t('register.electionDescription', 'Description')} :</span>
-              <p className="text-black">{election.description}</p>
+              <p className="text-black">
+                {metadataLoading ? (
+                  <span className="animate-pulse">Chargement...</span>
+                ) : (
+                  electionMetadata?.description || 'Aucune description'
+                )}
+              </p>
             </div>
             <div>
               <span className="text-black text-sm">{t('register.electionId', 'ID')} :</span>
