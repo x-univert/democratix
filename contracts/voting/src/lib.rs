@@ -26,6 +26,14 @@ pub struct Candidate<M: ManagedTypeApi> {
     pub description_ipfs: ManagedBuffer<M>,
 }
 
+/// Structure pour les résultats finaux d'un candidat
+#[type_abi]
+#[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Clone, Debug)]
+pub struct CandidateResult {
+    pub candidate_id: u32,
+    pub vote_count: u64,
+}
+
 /// Structure représentant une élection
 #[type_abi]
 #[derive(TopEncode, TopDecode, NestedEncode, NestedDecode, Debug)]
@@ -1128,10 +1136,20 @@ pub trait VotingContract {
         self.election_closed_event(election_id, election.total_votes);
     }
 
-    /// Finalise une élection fermée (changement de statut Closed -> Finalized)
-    /// Cette fonction marque les résultats comme officiellement publiés et immuables
+    /// Finalise une élection fermée avec les résultats finaux
+    /// Cette fonction stocke les résultats on-chain de manière immuable et optionnellement le hash IPFS
+    ///
+    /// # Arguments
+    /// * `election_id` - ID de l'élection
+    /// * `results_ipfs_hash` - Hash IPFS des résultats détaillés (vide si pas d'IPFS)
+    /// * `results` - Vec de CandidateResult (candidate_id, vote_count) - DOIT ÊTRE EN DERNIER
     #[endpoint(finalizeElection)]
-    fn finalize_election(&self, election_id: u64) {
+    fn finalize_election(
+        &self,
+        election_id: u64,
+        results_ipfs_hash: ManagedBuffer,
+        results: MultiValueEncoded<MultiValue2<u32, u64>>,
+    ) {
         let mut election = self.elections(election_id).get();
         require!(
             self.blockchain().get_caller() == election.organizer,
@@ -1142,10 +1160,79 @@ pub trait VotingContract {
             "L'élection doit être fermée avant d'être finalisée"
         );
 
+        // Vérifier que le nombre de résultats correspond au nombre de candidats
+        let results_count = results.len();
+        require!(
+            results_count == election.num_candidates as usize,
+            "Le nombre de résultats ne correspond pas au nombre de candidats"
+        );
+
+        // Stocker les résultats on-chain
+        let mut final_results_mapper = self.final_results(election_id);
+        final_results_mapper.clear();
+
+        let mut total_votes_check = 0u64;
+        for result_tuple in results {
+            let (candidate_id, vote_count) = result_tuple.into_tuple();
+
+            // Vérifier que candidate_id est valide
+            require!(
+                candidate_id > 0 && candidate_id <= election.num_candidates,
+                "candidate_id invalide"
+            );
+
+            let result = CandidateResult {
+                candidate_id,
+                vote_count,
+            };
+            final_results_mapper.push(&result);
+            total_votes_check += vote_count;
+        }
+
+        // Vérifier que le total des votes correspond (optionnel mais recommandé)
+        require!(
+            total_votes_check == election.total_votes,
+            "Le total des votes ne correspond pas"
+        );
+
+        // Stocker le hash IPFS s'il n'est pas vide
+        if !results_ipfs_hash.is_empty() {
+            self.results_ipfs_hash(election_id).set(&results_ipfs_hash);
+        }
+
         election.status = ElectionStatus::Finalized;
         self.elections(election_id).set(&election);
 
         self.election_finalized_event(election_id, election.total_votes);
+    }
+
+    /// Récupère les résultats finaux on-chain d'une élection finalisée
+    #[view(getFinalResults)]
+    fn get_final_results(&self, election_id: u64) -> MultiValueEncoded<MultiValue2<u32, u64>> {
+        let election = self.elections(election_id).get();
+        require!(
+            election.status == ElectionStatus::Finalized,
+            "L'élection doit être finalisée"
+        );
+
+        let mut results_encoded = MultiValueEncoded::new();
+        let final_results_mapper = self.final_results(election_id);
+
+        for result in final_results_mapper.iter() {
+            results_encoded.push(MultiValue2::from((result.candidate_id, result.vote_count)));
+        }
+
+        results_encoded
+    }
+
+    /// Récupère le hash IPFS des résultats détaillés
+    #[view(getResultsIpfsHash)]
+    fn get_results_ipfs_hash(&self, election_id: u64) -> OptionalValue<ManagedBuffer> {
+        if self.results_ipfs_hash(election_id).is_empty() {
+            OptionalValue::None
+        } else {
+            OptionalValue::Some(self.results_ipfs_hash(election_id).get())
+        }
     }
 
     /// Configure l'adresse du backend autorisé à vérifier les preuves zk-SNARK
@@ -1369,6 +1456,17 @@ pub trait VotingContract {
     /// Compteur global de codes d'invitation générés (pour garantir l'unicité entre les batches)
     #[storage_mapper("invitationCodeCounter")]
     fn invitation_code_counter(&self) -> SingleValueMapper<u64>;
+
+    /// === STORAGE POUR LES RÉSULTATS FINAUX ===
+
+    /// Résultats finaux on-chain (candidate_id -> vote_count)
+    /// Stocké lors de la finalisation pour garantir l'immuabilité et la vérifiabilité
+    #[storage_mapper("finalResults")]
+    fn final_results(&self, election_id: u64) -> VecMapper<CandidateResult>;
+
+    /// Hash IPFS des résultats détaillés (métadonnées complètes, timestamps, etc.)
+    #[storage_mapper("resultsIpfsHash")]
+    fn results_ipfs_hash(&self, election_id: u64) -> SingleValueMapper<ManagedBuffer>;
 
     // === EVENTS ===
 

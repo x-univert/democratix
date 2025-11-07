@@ -229,4 +229,14 @@ router.get(
   electionController.getVotesTimeline
 );
 
+/**
+ * POST /api/elections/:id/prepare-final-results
+ * Prépare les résultats finaux pour la finalisation (upload IPFS + calcul des totaux)
+ */
+router.post(
+  '/:id/prepare-final-results',
+  validateParams(IdParamSchema),
+  electionController.prepareFinalResults
+);
+
 export default router;

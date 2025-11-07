@@ -1580,6 +1580,155 @@ export class ElectionController {
       });
     }
   };
+
+  /**
+   * Prépare les résultats finaux pour la finalisation
+   * Calcule les totaux de votes et uploade les résultats détaillés sur IPFS
+   * POST /api/elections/:id/prepare-final-results
+   */
+  prepareFinalResults = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const electionId = parseInt(req.params.id);
+
+      logger.info('🔍 Preparing final results for election', { electionId });
+
+      // 1. Récupérer l'élection
+      const election = await multiversxService.getElection(electionId);
+      if (!election) {
+        res.status(404).json({
+          success: false,
+          error: 'Election not found'
+        });
+        return;
+      }
+
+      // Vérifier que l'élection est fermée
+      if (election.status !== 'Closed') {
+        res.status(400).json({
+          success: false,
+          error: 'Election must be Closed to finalize results'
+        });
+        return;
+      }
+
+      // 2. Récupérer les candidats
+      const candidates = await multiversxService.getElectionCandidates(electionId);
+      if (!candidates || candidates.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: 'No candidates found for this election'
+        });
+        return;
+      }
+
+      // 3. Calculer les résultats totaux par candidat
+      const candidateResults: Array<{ candidate_id: number; votes: number; name: string }> = [];
+
+      for (const candidate of candidates) {
+        let totalVotes = 0;
+
+        // Votes publics (Option 0)
+        if (election.encryption_type === 0) {
+          const publicVotes = await multiversxService.getCandidateVotes(electionId, candidate.id);
+          totalVotes += publicVotes;
+        }
+
+        // Votes ElGamal déchiffrés (Options 1 et 2) - depuis le body de la requête
+        const elgamalDecryptedVotes = req.body.elgamalDecryptedVotes;
+        if (elgamalDecryptedVotes && elgamalDecryptedVotes[candidate.id]) {
+          totalVotes += elgamalDecryptedVotes[candidate.id];
+        }
+
+        candidateResults.push({
+          candidate_id: candidate.id,
+          votes: totalVotes,
+          name: candidate.name
+        });
+      }
+
+      // Trier par nombre de votes décroissant
+      candidateResults.sort((a, b) => b.votes - a.votes);
+
+      // 4. Créer le JSON détaillé des résultats
+      const detailedResults = {
+        electionId,
+        electionTitle: election.title,
+        totalVotes: election.total_votes,
+        encryptionType: election.encryption_type,
+        finalizedAt: new Date().toISOString(),
+        candidates: candidateResults.map((r, index) => ({
+          rank: index + 1,
+          candidate_id: r.candidate_id,
+          name: r.name,
+          votes: r.votes,
+          percentage: election.total_votes > 0
+            ? ((r.votes / election.total_votes) * 100).toFixed(2)
+            : '0.00'
+        })),
+        winner: candidateResults[0] || null,
+        metadata: {
+          startTime: election.start_time,
+          endTime: election.end_time,
+          registeredVoters: election.registered_voters_count,
+          turnout: election.registered_voters_count > 0
+            ? ((election.total_votes / election.registered_voters_count) * 100).toFixed(2)
+            : '0.00'
+        }
+      };
+
+      logger.info('📊 Results calculated', {
+        electionId,
+        totalVotes: election.total_votes,
+        candidatesCount: candidateResults.length
+      });
+
+      // 5. Uploader les résultats détaillés sur IPFS
+      let ipfsHash: string | undefined;
+      try {
+        const ipfsName = `election-${electionId}-final-results-${Date.now()}.json`;
+        ipfsHash = await ipfsService.uploadJSON(detailedResults, ipfsName);
+
+        logger.info('✅ Results uploaded to IPFS', {
+          electionId,
+          ipfsHash,
+          url: `https://gateway.pinata.cloud/ipfs/${ipfsHash}`
+        });
+      } catch (ipfsError: any) {
+        logger.warn('⚠️  IPFS upload failed (continuing without IPFS hash)', {
+          electionId,
+          error: ipfsError.message
+        });
+        // Continue sans hash IPFS (optionnel)
+      }
+
+      // 6. Retourner les données pour la transaction blockchain
+      res.status(200).json({
+        success: true,
+        message: 'Final results prepared successfully',
+        data: {
+          electionId,
+          results: candidateResults.map(r => ({
+            candidate_id: r.candidate_id,
+            votes: r.votes
+          })),
+          ipfsHash,
+          ipfsUrl: ipfsHash ? `https://gateway.pinata.cloud/ipfs/${ipfsHash}` : undefined,
+          detailedResults
+        }
+      });
+
+    } catch (error: any) {
+      logger.error('❌ Error preparing final results', {
+        error: error.message,
+        stack: error.stack
+      });
+      res.status(500).json({
+        success: false,
+        error: 'Failed to prepare final results',
+        details: error.message
+      });
+    }
+  };
 }
 
 // Export singleton
