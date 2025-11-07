@@ -58,22 +58,18 @@ export class ZKVerifierService {
       logger.info('Initializing ZKVerifier service...');
 
       // Charger la verification key pour valid_vote
-      const validVoteKeyPath = join(
-        __dirname,
-        '../../circuits/build/valid_vote_verification_key.json'
-      );
+      // En production (dist/), les fichiers sont dans dist/circuits/build/
+      // En dev (src/), les fichiers sont dans circuits/build/
+      const validVoteKeyPath = this.resolveCircuitPath('valid_vote_verification_key.json');
       this.validVoteVKey = JSON.parse(readFileSync(validVoteKeyPath, 'utf-8'));
-      logger.info(`✅ Loaded valid_vote verification key`);
+      logger.info(`✅ Loaded valid_vote verification key from ${validVoteKeyPath}`);
 
       // Charger la verification key pour voter_eligibility_simple
-      const voterEligibilityKeyPath = join(
-        __dirname,
-        '../../circuits/build/voter_eligibility_simple_verification_key.json'
-      );
+      const voterEligibilityKeyPath = this.resolveCircuitPath('voter_eligibility_simple_verification_key.json');
       this.voterEligibilityVKey = JSON.parse(
         readFileSync(voterEligibilityKeyPath, 'utf-8')
       );
-      logger.info(`✅ Loaded voter_eligibility_simple verification key`);
+      logger.info(`✅ Loaded voter_eligibility_simple verification key from ${voterEligibilityKeyPath}`);
 
       this.initialized = true;
       logger.info('✅ ZKVerifier service initialized successfully');
@@ -81,6 +77,29 @@ export class ZKVerifierService {
       logger.error('❌ Failed to initialize ZKVerifier:', error);
       throw new Error(`ZKVerifier initialization failed: ${getErrorMessage(error)}`);
     }
+  }
+
+  /**
+   * Résout le chemin vers un fichier de circuit
+   * Supporte à la fois le mode dev (src/) et production (dist/)
+   */
+  private resolveCircuitPath(fileName: string): string {
+    const { existsSync } = require('fs');
+
+    // Essayer d'abord le chemin production (depuis dist/services/ vers dist/circuits/build/)
+    const prodPath = join(__dirname, '../circuits/build', fileName);
+    if (existsSync(prodPath)) {
+      return prodPath;
+    }
+
+    // Fallback sur le chemin dev (depuis src/services/ vers circuits/build/)
+    const devPath = join(__dirname, '../../circuits/build', fileName);
+    if (existsSync(devPath)) {
+      return devPath;
+    }
+
+    // Si aucun ne fonctionne, retourner le chemin production et laisser l'erreur se produire
+    throw new Error(`Circuit file not found: ${fileName} (tried ${prodPath} and ${devPath})`);
   }
 
   /**
