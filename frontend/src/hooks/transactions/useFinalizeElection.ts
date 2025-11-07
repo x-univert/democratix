@@ -64,13 +64,14 @@ export const useFinalizeElection = () => {
         ipfsHash || '', // ManagedBuffer (peut être vide)
       ];
 
-      // Ajouter chaque résultat comme paire (candidate_id, vote_count)
+      // Ajouter chaque résultat comme tuple [candidate_id, vote_count]
+      // Pour MultiValueEncoded<Composite<u32, u64>>, chaque élément doit être un array de 2 valeurs
       for (const result of results) {
-        args.push(result.candidate_id); // u32
-        args.push(result.votes); // u64
+        args.push([result.candidate_id, result.votes]); // Tuple (u32, u64)
       }
 
       console.log('📝 Transaction arguments:', args);
+      console.log('📝 Detailed args structure:', JSON.stringify(args, null, 2));
 
       // 4. Créer la transaction
       const transaction = await scFactory.createTransactionForExecute(
