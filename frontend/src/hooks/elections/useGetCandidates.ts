@@ -48,7 +48,7 @@ export const useGetCandidates = () => {
       for (let i = 0; i < candidatesData.data.data.returnData.length; i++) {
         const candidateBase64 = candidatesData.data.data.returnData[i];
         const candidateHex = base64ToHex(candidateBase64);
-        const candidate = decodeCandidate(candidateHex, i); // Index commence à 0
+        const candidate = decodeCandidate(candidateHex, i + 1); // IDs commencent à 1 (pas 0) pour le smart contract
         candidates.push(candidate);
       }
 
