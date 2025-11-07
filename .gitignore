@@ -82,6 +82,9 @@ backend/circuits/
 *.zkey
 verification_key.json
 
+# Exception: Allow verification keys (public keys, safe to commit)
+!backend/circuits/build/*_verification_key.json
+
 # Vercel
 .vercel
 
