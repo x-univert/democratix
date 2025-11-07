@@ -463,20 +463,19 @@ export const Vote = () => {
       console.log('🔐 Génération de la preuve zk-SNARK pour Option 2...');
       setPrivateVoteProgress({ step: 'Génération de la preuve zk-SNARK (2-3 secondes)...', progress: 30 });
 
-      // IMPORTANT: Les IDs de candidats on-chain commencent à 1, mais le circuit zk-SNARK
-      // s'attend à des IDs de 0 à n-1. On doit donc convertir.
-      const candidateIdForCircuit = selectedCandidate! - 1;
-
-      console.log('🔢 Conversion ID candidat:', {
-        onChainId: selectedCandidate,
-        circuitId: candidateIdForCircuit,
+      console.log('🔢 Candidate ID from smart contract (1-indexed):', {
+        candidateId: selectedCandidate,
         numCandidates
       });
 
       // Appeler le hook de vote avec preuve
+      // IMPORTANT: On passe l'ID du smart contract (1-indexed).
+      // Le hook zkproofEncrypted.ts gérera les conversions:
+      // - Pour ElGamal: candidateId + 1
+      // - Pour circuit: candidateId - 1 (0-indexed)
       const result = await submitPrivateVoteWithProof({
         electionId,
-        candidateId: candidateIdForCircuit,
+        candidateId: selectedCandidate!,
         numCandidates,
       });
 
