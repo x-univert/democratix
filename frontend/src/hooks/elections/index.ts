@@ -16,3 +16,4 @@ export * from './useGetPrivateVotesOption2';
 export * from './useGetElectionPublicKey';
 export * from './useSetupElGamalEncryption';
 export * from './useIsCoOrganizer';
+export * from './useGetFinalResults';

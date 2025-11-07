@@ -5,6 +5,7 @@ import { useGetAccount } from 'lib';
 import { RouteNamesEnum } from 'localConstants';
 import { useGetElection, useGetCandidates, useCandidateMetadata, useIPFSImage, type Election, type Candidate, useGetPrivateVotes, useGetPrivateVotesOption2, useIsCoOrganizer } from 'hooks/elections';
 import { useGetCandidateVotes } from 'hooks/elections/useGetCandidateVotes';
+import { useGetFinalResults } from 'hooks/elections/useGetFinalResults';
 import { useWebSocketNotifications } from 'hooks/useWebSocketNotifications';
 import { AnonymousVotesPanel } from 'components/AnonymousVotesPanel';
 import { DecryptElGamalModal } from 'components';
@@ -126,6 +127,7 @@ export const Results = () => {
   const { getElection } = useGetElection();
   const { getCandidates } = useGetCandidates();
   const { getCandidateVotes } = useGetCandidateVotes();
+  const { getFinalResults } = useGetFinalResults();
 
   const [election, setElection] = useState<Election | null>(null);
   const [candidatesWithVotes, setCandidatesWithVotes] = useState<CandidateWithVotes[]>([]);
@@ -134,6 +136,7 @@ export const Results = () => {
   const [showDecryptModal, setShowDecryptModal] = useState(false);
   const [elgamalDecryptedVotes, setElgamalDecryptedVotes] = useState<Record<number, number> | null>(null);
   const [canDecrypt, setCanDecrypt] = useState(false);
+  const [ipfsResultsUrl, setIpfsResultsUrl] = useState<string | null>(null);
 
   // Fetch private votes (zk-SNARK legacy - Option 0)
   const electionId = id ? parseInt(id) : null;
@@ -262,6 +265,44 @@ export const Results = () => {
           return;
         }
 
+        // Si l'élection est finalisée, récupérer les résultats depuis la blockchain
+        if (electionData.status === 'Finalized') {
+          console.log('📊 Election is finalized - fetching results from blockchain');
+          const finalResults = await getFinalResults(electionId);
+
+          if (finalResults && finalResults.results.length > 0) {
+            console.log('✅ Final results loaded from blockchain:', finalResults);
+
+            // Stocker l'URL IPFS si disponible
+            if (finalResults.ipfsUrl) {
+              setIpfsResultsUrl(finalResults.ipfsUrl);
+            }
+
+            // Mapper les résultats avec les candidats
+            const resultsMap = new Map(finalResults.results.map(r => [r.candidate_id, r.vote_count]));
+            const totalVotes = finalResults.results.reduce((sum, r) => sum + r.vote_count, 0);
+
+            const results = candidates.map(candidate => ({
+              ...candidate,
+              votes: resultsMap.get(candidate.id) || 0,
+              percentage: 0
+            }));
+
+            const withPercentages = results.map(c => ({
+              ...c,
+              percentage: totalVotes > 0 ? Math.round((c.votes / totalVotes) * 100) : 0
+            }));
+
+            withPercentages.sort((a, b) => b.votes - a.votes);
+            setCandidatesWithVotes(withPercentages);
+            setLoading(false);
+            return;
+          } else {
+            console.warn('⚠️ No final results found on blockchain, falling back to standard method');
+          }
+        }
+
+        // Méthode standard pour élections non-finalisées
         console.log('🔍 Fetching votes with elgamalDecryptedVotes state:', elgamalDecryptedVotes);
 
         const votesPromises = candidates.map(async (candidate) => {
@@ -460,6 +501,25 @@ export const Results = () => {
           <div>
             <h1 className="text-4xl font-bold text-primary mb-2">📊 {t('results.title')}</h1>
             <h2 className="text-2xl text-secondary">{election.title}</h2>
+
+            {/* Afficher le badge "Finalisé" avec lien IPFS si disponible */}
+            {election.status === 'Finalized' && (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800 border border-green-300">
+                  ✅ {t('results.finalized') || 'Résultats finalisés'}
+                </span>
+                {ipfsResultsUrl && (
+                  <a
+                    href={ipfsResultsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800 border border-blue-300 hover:bg-blue-200 transition-colors"
+                  >
+                    📋 {t('results.viewOnIpfs') || 'Voir sur IPFS'}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3">
