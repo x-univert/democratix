@@ -124,8 +124,10 @@ function decodeCandidate(hex: string, defaultId: number): Candidate {
     const decodedId = bytesToNumber(bytes.slice(offset, offset + 4));
     offset += 4;
 
-    // Utiliser defaultId si l'ID décodé est 0 (fallback)
-    const id = decodedId === 0 ? defaultId : decodedId;
+    // Smart contract stores candidates with 0-indexed IDs (0, 1, 2...)
+    // but expects 1-indexed IDs for finalization (1, 2, 3...)
+    // Always add 1 to match finalization expectations
+    const id = decodedId + 1;
 
     // Name (ManagedBuffer)
     const nameLen = bytesToNumber(bytes.slice(offset, offset + 4));
