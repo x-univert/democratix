@@ -20,7 +20,7 @@ import { useWebSocketNotifications } from '../../hooks/useWebSocketNotifications
 import { RouteNamesEnum } from '../../localConstants';
 import { SkeletonDetail } from '../../components/Skeleton';
 import { ErrorMessage } from '../../components/ErrorMessage';
-import { ConfirmModal, InvitationCodesModal, InvitationCodesGeneratorModal, TransactionSentModal, TransactionProgressModal, SetupElGamalModal, CoOrganizersPanel, EncryptionTypeBadge, RegistrationModal, BulkImportModal, QRCodeGeneratorModal } from '../../components';
+import { ConfirmModal, InvitationCodesModal, InvitationCodesGeneratorModal, TransactionSentModal, TransactionProgressModal, SetupElGamalModal, CoOrganizersPanel, EncryptionTypeBadge, RegistrationModal, BulkImportModal, QRCodeGeneratorModal, DecryptElGamalModal } from '../../components';
 
 // Helper function to fix UTF-8 encoding issues
 const fixEncoding = (str: string): string => {
@@ -197,6 +197,10 @@ export const ElectionDetail = () => {
   // Registration with code
   const [invitationCode, setInvitationCode] = useState('');
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+
+  // Decrypt ElGamal votes
+  const [showDecryptModal, setShowDecryptModal] = useState(false);
+  const [canDecrypt, setCanDecrypt] = useState(false);
   const [registrationTxHash, setRegistrationTxHash] = useState<string | null>(null);
 
   // Export voters
@@ -241,6 +245,56 @@ export const ElectionDetail = () => {
       }
     }
   }, [id]);
+
+  // Check if user can decrypt (primary organizer or co-organizer with canDecryptVotes permission)
+  useEffect(() => {
+    const checkDecryptPermission = async () => {
+      if (!id || !address) {
+        console.log('❌ canDecrypt set to: false (missing electionId or address)');
+        setCanDecrypt(false);
+        return;
+      }
+
+      // Wait for election to load before checking permissions
+      if (!election) {
+        console.log('⏳ Waiting for election to load...');
+        setCanDecrypt(false);
+        return;
+      }
+
+      // Primary organizer can always decrypt
+      console.log('✅ isPrimaryOrganizer:', isPrimaryOrganizer);
+      if (isPrimaryOrganizer) {
+        console.log('✅ canDecrypt set to: true (primary organizer)');
+        setCanDecrypt(true);
+        return;
+      }
+
+      // Check if co-organizer has decrypt permission
+      console.log('⚠️ isPrimaryOrganizer: false');
+      console.log('⚠️ Checking co-organizer permissions...');
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_BACKEND_API_URL}/api/elections/${id}/organizers`
+        );
+        if (!response.ok) throw new Error('Failed to fetch organizers');
+
+        const data = await response.json();
+        const organizersData = data.data || data;
+        const coOrg = organizersData.coOrganizers?.find(
+          (co: any) => co.address.toLowerCase() === address.toLowerCase()
+        );
+        const canDecryptValue = coOrg?.permissions?.canDecryptVotes || false;
+        console.log('✅ Co-organizer canDecrypt:', canDecryptValue);
+        setCanDecrypt(canDecryptValue);
+      } catch (err) {
+        console.error('❌ Error checking decrypt permission:', err);
+        setCanDecrypt(false);
+      }
+    };
+
+    checkDecryptPermission();
+  }, [id, address, isPrimaryOrganizer, election]);
 
   useEffect(() => {
     const fetchElectionAndCandidates = async () => {
@@ -1309,6 +1363,44 @@ export const ElectionDetail = () => {
             </div>
           )}
 
+          {/* ElGamal Encrypted Votes Section (Organizer or Co-Organizer with decrypt permission) */}
+          {canDecrypt && election && (election.status === 'Closed' || election.status === 'Finalized') && (election.encryption_type === 1 || election.encryption_type === 2) && (
+            <div className="mb-6">
+              <div className="bg-gradient-to-r from-teal-500 to-teal-600 border-2 border-teal-500 rounded-xl p-6 shadow-lg">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <span className="text-5xl">🔓</span>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">
+                        {t('results.elgamal.title') || 'Votes Chiffrés ElGamal'}
+                      </h2>
+                      <p className="text-white text-opacity-90 text-sm mt-1">
+                        {election.encryption_type === 2
+                          ? (t('results.elgamal.descriptionZk') || 'Option 2 - Déchiffrez les votes avec votre clé privée')
+                          : (t('results.elgamal.description') || 'Option 1 - Déchiffrez les votes avec votre clé privée')}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowDecryptModal(true)}
+                    className="px-6 py-3 bg-white text-teal-600 rounded-lg hover:bg-gray-100 transition-all font-semibold shadow-md flex items-center gap-2 whitespace-nowrap"
+                  >
+                    <span>🔓</span>
+                    <span>{t('results.elgamal.decryptButton') || 'Déchiffrer les votes'}</span>
+                  </button>
+                </div>
+                <div className="mt-4 bg-white bg-opacity-10 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-xl">ℹ️</span>
+                    <p className="text-white text-opacity-90 text-sm">
+                      {t('results.elgamal.info') || 'Les votes chiffrés avec ElGamal nécessitent la clé privée pour être déchiffrés. Seul l\'organisateur principal ou les co-organisateurs autorisés peuvent effectuer cette opération.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Results section (for closed or finalized elections) */}
           {(isFinalized || isClosed) && (
             <div className="bg-secondary border-2 border-secondary vibe-border rounded-xl p-6 shadow-md">
@@ -1728,6 +1820,26 @@ export const ElectionDetail = () => {
           onClose={() => setShowInvitationCodesGeneratorModal(false)}
         />
       )}
+
+      {/* Decrypt ElGamal Modal */}
+      <DecryptElGamalModal
+        isOpen={showDecryptModal}
+        onClose={() => setShowDecryptModal(false)}
+        electionId={parseInt(id || '0')}
+        onSuccess={(decryptedVotes) => {
+          console.log('Votes déchiffrés:', decryptedVotes);
+
+          // Save ONLY results to localStorage (not the entire response object)
+          if (id && decryptedVotes.results) {
+            localStorage.setItem(`elgamal-decrypted-${id}`, JSON.stringify(decryptedVotes));
+            console.log('✅ ElGamal decrypted votes saved to localStorage');
+          }
+
+          // Update state to trigger re-render
+          setElgamalDecryptedVotes(decryptedVotes.results);
+          setShowDecryptModal(false);
+        }}
+      />
 
       {/* Loading indicator for transaction watching */}
       {txLoading && (

@@ -304,7 +304,16 @@
     "resultsPublished": "Official results are now published",
     "electionFinalized": "The election is now finalized",
     "finalizeInfo": "The page will reload automatically to display the final results.",
-    "finalizeError": "Finalization error"
+    "finalizeError": "Finalization error",
+    "qrCodes": {
+      "title": "Registration QR Codes",
+      "subtitle": "Modern QR Code Registration",
+      "description": "Generate unique QR codes that your voters can scan with their smartphone to register instantly. Perfect for in-person events!",
+      "benefits": "Benefits: Fast, contactless, traceable, with configurable expiration",
+      "generateButton": "Generate QR Codes",
+      "hint": "Generated QR codes can be downloaded individually or in batch, and printed on badges, posters, or sent by email.",
+      "security": "Each QR code contains a unique one-time token with customizable expiration."
+    }
   },
   "vote": {
     "title": "Vote",
@@ -874,17 +883,6 @@
       "step2": "Sign the transaction with the provided data",
       "step3": "Wait for blockchain confirmation",
       "step4": "Activate your election and voters will be able to vote encrypted"
-    }
-  },
-  "electionDetail": {
-    "qrCodes": {
-      "title": "Registration QR Codes",
-      "subtitle": "Modern QR Code Registration",
-      "description": "Generate unique QR codes that your voters can scan with their smartphone to register instantly. Perfect for in-person events!",
-      "benefits": "Benefits: Fast, contactless, traceable, with configurable expiration",
-      "generateButton": "Generate QR Codes",
-      "hint": "Generated QR codes can be downloaded individually or in batch, and printed on badges, posters, or sent by email.",
-      "security": "Each QR code contains a unique one-time token with customizable expiration."
     }
   },
   "coOrganizers": {

@@ -304,7 +304,16 @@
     "resultsPublished": "Los resultados oficiales están ahora publicados",
     "electionFinalized": "La elección ya está finalizada",
     "finalizeInfo": "La página se recargará automáticamente para mostrar los resultados finales.",
-    "finalizeError": "Error al finalizar"
+    "finalizeError": "Error al finalizar",
+    "qrCodes": {
+      "title": "Códigos QR de Registro",
+      "subtitle": "Registro Moderno con Código QR",
+      "description": "Genere códigos QR únicos que sus votantes pueden escanear con su smartphone para registrarse instantáneamente. ¡Perfecto para eventos presenciales!",
+      "benefits": "Beneficios: Rápido, sin contacto, rastreable, con caducidad configurable",
+      "generateButton": "Generar Códigos QR",
+      "hint": "Los códigos QR generados se pueden descargar individualmente o en lote, e imprimirse en credenciales, carteles o enviarse por correo electrónico.",
+      "security": "Cada código QR contiene un token único de un solo uso con caducidad personalizable."
+    }
   },
   "vote": {
     "title": "Votar",
@@ -874,15 +883,6 @@
       "step2": "Firmar la transacción con los datos proporcionados",
       "step3": "Esperar la confirmación en la blockchain",
       "step4": "Activar su elección y los votantes podrán votar de forma cifrada"
-    },
-    "qrCodes": {
-      "title": "Códigos QR de Registro",
-      "subtitle": "Registro Moderno con Código QR",
-      "description": "Genere códigos QR únicos que sus votantes pueden escanear con su smartphone para registrarse instantáneamente. ¡Perfecto para eventos presenciales!",
-      "benefits": "Beneficios: Rápido, sin contacto, rastreable, con caducidad configurable",
-      "generateButton": "Generar Códigos QR",
-      "hint": "Los códigos QR generados se pueden descargar individualmente o en lote, e imprimirse en credenciales, carteles o enviarse por correo electrónico.",
-      "security": "Cada código QR contiene un token único de un solo uso con caducidad personalizable."
     }
   },
   "coOrganizers": {
