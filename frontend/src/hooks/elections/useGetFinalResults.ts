@@ -46,15 +46,33 @@ export const useGetFinalResults = () => {
       console.log('📊 returnData length:', resultsData.data.data.returnData.length);
       console.log('📊 returnData:', resultsData.data.data.returnData);
 
-      // Décoder les résultats (chaque élément est un tuple (u32, u64))
+      // MultiversX flattens MultiValueEncoded<MultiValue2<u32, u64>> into separate elements:
+      // [candidate_id_1, vote_count_1, candidate_id_2, vote_count_2, ...]
+      // We need to read them in pairs
       const results: FinalResult[] = [];
-      for (let i = 0; i < resultsData.data.data.returnData.length; i++) {
-        const resultBase64 = resultsData.data.data.returnData[i];
-        const resultHex = base64ToHex(resultBase64);
-        console.log(`🔍 Result ${i}: base64="${resultBase64}", hex="${resultHex}"`);
-        const result = decodeResult(resultHex, i);
-        console.log(`✅ Decoded result ${i}:`, result);
-        results.push(result);
+      const returnData = resultsData.data.data.returnData;
+
+      if (returnData.length % 2 !== 0) {
+        console.error('⚠️ Odd number of return values - expected pairs of (candidate_id, vote_count)');
+      }
+
+      for (let i = 0; i < returnData.length; i += 2) {
+        if (i + 1 < returnData.length) {
+          const candidateIdBase64 = returnData[i];
+          const voteCountBase64 = returnData[i + 1];
+
+          const candidateIdHex = base64ToHex(candidateIdBase64);
+          const voteCountHex = base64ToHex(voteCountBase64);
+
+          console.log(`🔍 Result ${i/2}: candidateId="${candidateIdBase64}" (${candidateIdHex}), voteCount="${voteCountBase64}" (${voteCountHex})`);
+
+          const candidate_id = parseInt(candidateIdHex, 16);
+          const vote_count = parseInt(voteCountHex, 16);
+
+          console.log(`✅ Decoded result ${i/2}: candidate_id=${candidate_id}, vote_count=${vote_count}`);
+
+          results.push({ candidate_id, vote_count });
+        }
       }
 
       // 2. Récupérer le hash IPFS si disponible
@@ -148,29 +166,3 @@ function bytesToString(bytes: number[]): string {
   }
 }
 
-function decodeResult(hex: string, index: number): FinalResult {
-  try {
-    const bytes = hexToBytes(hex);
-    console.log(`  📦 Result ${index} bytes (${bytes.length} total):`, bytes);
-    let offset = 0;
-
-    // candidate_id (u32 - 4 bytes)
-    const candidateIdBytes = bytes.slice(offset, offset + 4);
-    const candidate_id = bytesToNumber(candidateIdBytes);
-    console.log(`  🆔 Candidate ID bytes:`, candidateIdBytes, `→ ${candidate_id}`);
-    offset += 4;
-
-    // vote_count (u64 - 8 bytes)
-    const voteCountBytes = bytes.slice(offset, offset + 8);
-    let vote_count = 0;
-    for (let i = 0; i < voteCountBytes.length; i++) {
-      vote_count = vote_count * 256 + voteCountBytes[i];
-    }
-    console.log(`  📊 Vote count bytes:`, voteCountBytes, `→ ${vote_count}`);
-
-    return { candidate_id, vote_count };
-  } catch (err) {
-    console.error('Error decoding result:', err);
-    return { candidate_id: 0, vote_count: 0 };
-  }
-}
