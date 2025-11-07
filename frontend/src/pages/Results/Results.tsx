@@ -184,17 +184,29 @@ export const Results = () => {
   useEffect(() => {
     const checkDecryptPermission = async () => {
       if (!electionId || !address) {
+        console.log('❌ canDecrypt set to: false (missing electionId or address)');
+        setCanDecrypt(false);
+        return;
+      }
+
+      // Wait for election to load before checking permissions
+      if (!election) {
+        console.log('⏳ Waiting for election to load...');
         setCanDecrypt(false);
         return;
       }
 
       // Primary organizer can always decrypt
+      console.log('✅ isPrimaryOrganizer:', isPrimaryOrganizer);
       if (isPrimaryOrganizer) {
+        console.log('✅ canDecrypt set to: true (primary organizer)');
         setCanDecrypt(true);
         return;
       }
 
       // Check if co-organizer has decrypt permission
+      console.log('⚠️ isPrimaryOrganizer: false');
+      console.log('⚠️ Checking co-organizer permissions...');
       try {
         const response = await axios.get(
           `${import.meta.env.VITE_BACKEND_API_URL}/api/elections/${electionId}/organizers`
@@ -203,15 +215,17 @@ export const Results = () => {
         const coOrg = organizersData.coOrganizers?.find(
           (co: any) => co.address.toLowerCase() === address.toLowerCase()
         );
-        setCanDecrypt(coOrg?.permissions?.canDecryptVotes || false);
+        const canDecryptValue = coOrg?.permissions?.canDecryptVotes || false;
+        console.log('✅ Co-organizer canDecrypt:', canDecryptValue);
+        setCanDecrypt(canDecryptValue);
       } catch (err) {
-        console.error('Error checking decrypt permission:', err);
+        console.error('❌ Error checking decrypt permission:', err);
         setCanDecrypt(false);
       }
     };
 
     checkDecryptPermission();
-  }, [electionId, address, isPrimaryOrganizer]);
+  }, [electionId, address, isPrimaryOrganizer, election]);
 
   useEffect(() => {
     const fetchData = async () => {
