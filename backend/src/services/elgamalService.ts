@@ -138,11 +138,11 @@ export class ElGamalService {
       for (let m = 1; m <= 200; m++) {
         if (G.multiply(BigInt(m)).equals(mG)) {
           // Reverse the encoding: m = encodedCandidateId
-          // encodedCandidateId = mappedCandidateId + 1
-          // mappedCandidateId = candidateId + 1
-          // So: candidateId = (m - 1) - 1 = m - 2
-          const candidateId = m - 2;
-          logger.debug('✅ Vote decrypted', { candidateId });
+          // Frontend encodes: encodedCandidateId = candidateId + 1
+          // So: candidateId = m - 1
+          // Example: Candidate 1 → encoded as 2 → m = 2 → candidateId = 1
+          const candidateId = m - 1;
+          logger.debug('✅ Vote decrypted', { m, candidateId });
           return candidateId;
         }
       }
