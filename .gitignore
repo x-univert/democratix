@@ -85,6 +85,10 @@ verification_key.json
 # Exception: Allow verification keys (public keys, safe to commit)
 !backend/circuits/build/*_verification_key.json
 
+# Exception: Allow frontend circuit files (needed for zk-SNARK proof generation in browser)
+!frontend/public/circuits/**/*.wasm
+!frontend/public/circuits/**/*.zkey
+
 # Vercel
 .vercel
 
