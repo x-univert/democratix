@@ -135,6 +135,7 @@ export const ElectionDetail = () => {
   const { getElection } = useGetElection();
   const { getCandidates } = useGetCandidates();
   const { getCandidateVotes } = useGetCandidateVotes();
+  const { getFinalResults } = useGetFinalResults();
   const { activateElection } = useActivateElection();
   const { closeElection } = useCloseElection();
   const { finalizeElection } = useFinalizeElection();
@@ -339,6 +340,38 @@ export const ElectionDetail = () => {
 
       setLoadingResults(true);
       try {
+        // Si l'élection est finalisée, utiliser les résultats de la blockchain
+        if (election.status === 'Finalized') {
+          console.log('📊 Election finalized - fetching results from blockchain');
+          const finalResults = await getFinalResults(election.id);
+
+          if (finalResults && finalResults.results.length > 0) {
+            console.log('✅ Final results loaded from blockchain:', finalResults);
+
+            const resultsMap = new Map(finalResults.results.map(r => [r.candidate_id, r.vote_count]));
+            const totalVotes = finalResults.results.reduce((sum, r) => sum + r.vote_count, 0);
+
+            const results = candidates.map(candidate => ({
+              ...candidate,
+              votes: resultsMap.get(candidate.id) || 0,
+              percentage: 0
+            }));
+
+            const withPercentages = results.map(c => ({
+              ...c,
+              percentage: totalVotes > 0 ? Math.round((c.votes / totalVotes) * 100) : 0
+            }));
+
+            withPercentages.sort((a, b) => b.votes - a.votes);
+            setCandidatesWithVotes(withPercentages);
+            setLoadingResults(false);
+            return;
+          } else {
+            console.warn('⚠️ No final results found on blockchain, falling back to standard method');
+          }
+        }
+
+        // Méthode standard pour élections non-finalisées
         const votesPromises = candidates.map(async (candidate) => {
           const standardVotes = await getCandidateVotes(election.id, candidate.id);
           // Add ElGamal decrypted votes if available
