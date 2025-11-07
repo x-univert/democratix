@@ -569,6 +569,7 @@
       "title": "Votes Chiffrés ElGamal",
       "titleOption2": "Votes Chiffrés ElGamal + zk-SNARK",
       "description": "Option 1 - Déchiffrez les votes avec votre clé privée",
+      "descriptionZk": "Option 2 - {{count}} votes chiffrés avec preuve zk-SNARK - Déchiffrez avec votre clé privée",
       "descriptionOption2": "Option 2 - {{count}} votes chiffrés - Déchiffrez avec votre clé privée",
       "decryptButton": "Déchiffrer les votes",
       "info": "En tant qu'organisateur, vous pouvez déchiffrer les votes ElGamal en utilisant la clé privée que vous avez téléchargée lors de la configuration. Le déchiffrement révélera le nombre de votes pour chaque candidat tout en préservant l'anonymat des électeurs."

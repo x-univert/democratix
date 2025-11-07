@@ -58,20 +58,23 @@ export const useFinalizeElection = () => {
       });
 
       // 3. Construire les arguments pour la transaction
-      // Signature: finalizeElection(election_id: u64, results_ipfs_hash: ManagedBuffer, results: MultiValueEncoded<(u32, u64)>)
+      // Signature: finalizeElection(election_id: u64, results_ipfs_hash: ManagedBuffer, results: MultiValueEncoded<MultiValue2<u32, u64>>)
+      // MultiversX flatten automatiquement MultiValueEncoded, donc on envoie les paires flattened
       const args: any[] = [
         electionId, // u64
         ipfsHash || '', // ManagedBuffer (peut être vide)
       ];
 
-      // Ajouter chaque résultat comme tuple [candidate_id, vote_count]
-      // Pour MultiValueEncoded<Composite<u32, u64>>, chaque élément doit être un array de 2 valeurs
+      // Ajouter chaque résultat comme paires flattened: [candidate_id, vote_count, candidate_id, vote_count, ...]
+      // Utiliser les types explicites U32Value et U64Value pour s'assurer de l'encodage correct
       for (const result of results) {
-        args.push([result.candidate_id, result.votes]); // Tuple (u32, u64)
+        args.push(new U32Value(result.candidate_id)); // u32
+        args.push(new U64Value(result.votes)); // u64
       }
 
       console.log('📝 Transaction arguments:', args);
-      console.log('📝 Detailed args structure:', JSON.stringify(args, null, 2));
+      console.log('📝 Detailed args structure (candidate_ids and vote_counts):',
+        results.map(r => `ID=${r.candidate_id} votes=${r.votes}`));
 
       // 4. Créer la transaction
       const transaction = await scFactory.createTransactionForExecute(
