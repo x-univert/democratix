@@ -609,8 +609,18 @@ export const ElectionDetail = () => {
     if (!election) return;
     setShowFinalizeModal(false);
     try {
-      // Passer les votes ElGamal déchiffrés si disponibles
-      const result = await finalizeElection(election.id, elgamalDecryptedVotes || undefined);
+      // Map candidates to simple format for backend
+      const candidatesForBackend = candidates.map(c => ({
+        id: c.id,
+        name: c.name
+      }));
+
+      // Passer les votes ElGamal déchiffrés et les candidats
+      const result = await finalizeElection(
+        election.id,
+        elgamalDecryptedVotes || undefined,
+        candidatesForBackend
+      );
       if (result && result.transactionHash) {
         setFinalizeTxHash(result.transactionHash);
         setShowFinalizeTransactionModal(true);

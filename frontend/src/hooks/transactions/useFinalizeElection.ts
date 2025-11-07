@@ -26,16 +26,18 @@ export const useFinalizeElection = () => {
 
   const finalizeElection = async (
     electionId: number,
-    elgamalDecryptedVotes?: Record<number, number>
+    elgamalDecryptedVotes?: Record<number, number>,
+    candidates?: Array<{ id: number; name: string }>
   ) => {
     try {
-      console.log('🔍 Starting finalization process...', { electionId, elgamalDecryptedVotes });
+      console.log('🔍 Starting finalization process...', { electionId, elgamalDecryptedVotes, candidates });
 
       // 1. Préparer les résultats (backend calcule totaux + upload IPFS)
       const prepareResponse = await axios.post(
         `${import.meta.env.VITE_BACKEND_API_URL}/api/elections/${electionId}/prepare-final-results`,
         {
-          elgamalDecryptedVotes: elgamalDecryptedVotes || {}
+          elgamalDecryptedVotes: elgamalDecryptedVotes || {},
+          candidates: candidates || []
         }
       );
 
