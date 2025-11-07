@@ -1631,7 +1631,16 @@ export class ElectionController {
 
         // Pour les votes ElGamal (Options 1 et 2), utiliser les votes déchiffrés
         if (election.encryption_type === 1 || election.encryption_type === 2) {
-          totalVotes = elgamalDecryptedVotes[candidate.id] || 0;
+          // Gérer les deux formats : 1-indexed (nouveau) et 0-indexed (ancien)
+          // Essayer d'abord le format 1-indexed (clé = candidate.id)
+          totalVotes = elgamalDecryptedVotes[candidate.id];
+
+          // Si non trouvé ou 0, essayer le format 0-indexed (clé = candidate.id - 1)
+          if (!totalVotes && candidate.id > 0) {
+            totalVotes = elgamalDecryptedVotes[candidate.id - 1] || 0;
+          }
+
+          totalVotes = totalVotes || 0;
         }
         // Pour les votes publics (Option 0), le total_votes est déjà dans l'élection
         // On suppose que le frontend envoie les bonnes données

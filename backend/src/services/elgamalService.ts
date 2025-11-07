@@ -182,8 +182,9 @@ export class ElGamalService {
           const vote = votes[i];
           const candidateIdCircuit = this.decrypt(vote.c1, vote.c2, privateKey);
 
-          // Remap du circuit (-1, 0, 1...) vers onChain (0, 1, 2...)
-          const candidateIdOnChain = candidateIdCircuit + 1;
+          // Remap du circuit (-1, 0, 1...) vers onChain (1, 2, 3...)
+          // Smart contract expects 1-indexed candidate IDs (id > 0)
+          const candidateIdOnChain = candidateIdCircuit + 2;
 
           // Incrémenter le compteur pour ce candidat
           results[candidateIdOnChain] = (results[candidateIdOnChain] || 0) + 1;
