@@ -1,0 +1,63 @@
+{
+  "version": "1.0",
+  "model": "claude-sonnet-4-5-20250929",
+
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(wsl bash:*)",
+      "Bash(sc-meta:*)",
+      "Bash(dir:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(curl:*)",
+      "Bash(timeout:*)"
+    ],
+
+    "ask": [
+      "Bash(npm run clean:*)",
+      "Bash(rm:*)",
+      "Bash(del:*)",
+      "Bash(git reset:*)",
+      "Bash(git rebase:*)",
+      "Bash(git push --force:*)"
+    ],
+
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(backend/.env)",
+      "Read(backend/.env.*)",
+      "Read(frontend/.env)",
+      "Read(frontend/.env.*)",
+      "Read(backend/.secure-keys/**)",
+      "Read(**/node_modules/**)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(backend/.env)",
+      "Write(frontend/.env)",
+      "Edit(.env)",
+      "Edit(.env.*)"
+    ]
+  },
+
+  "env": {
+    "NODE_ENV": "development"
+  },
+
+  "companyAnnouncements": [
+    "🗳️ DEMOCRATIX - Plateforme de Vote Décentralisée MultiversX",
+    "📚 Utilisez /help pour voir les commandes disponibles",
+    "💡 Astuce: Utilisez # au début d'un message pour ajouter à la mémoire",
+    "🔧 Commandes utiles: /build-contract, /test-vote, /deploy-check"
+  ]
+}

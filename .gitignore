@@ -72,8 +72,14 @@ cypress/screenshots/
 # Wallets & Private Keys (IMPORTANT: Never commit!)
 multiversx-wallets/
 
-# Claude AI Configuration (local only)
-.claude/
+# Claude AI Configuration (commit shared config, ignore personal files)
+.claude/settings.local.json
+.claude/conversations/
+.claude/todos/
+.claude/docs-claude/
+.claude/*.bat
+.claude/*.ps1
+.claude/*.js
 
 # Backend Secrets (NEVER commit!)
 backend/.secure-keys/
