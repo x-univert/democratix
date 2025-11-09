@@ -113,6 +113,10 @@ pub trait InstitutionRegistryContract {
         self.total_regions().set(0u64);
     }
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     /// Enregistrer une nouvelle institution (admin uniquement)
     ///
     /// # Arguments

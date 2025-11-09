@@ -23,6 +23,10 @@ pub trait VoterRegistry {
     #[init]
     fn init(&self) {}
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     /// Enregistre un nouvel électeur avec une preuve zk-SNARK
     ///
     /// # Arguments

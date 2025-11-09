@@ -119,6 +119,10 @@ pub trait PollContract {
         self.next_option_id().set(1u64);
     }
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     /// Créer un nouveau sondage
     ///
     /// # Arguments

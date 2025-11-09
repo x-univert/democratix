@@ -115,6 +115,10 @@ pub trait RicContract {
         self.next_referendum_id().set(1);
     }
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     // ==================== STORAGE ====================
 
     #[storage_mapper("next_proposal_id")]

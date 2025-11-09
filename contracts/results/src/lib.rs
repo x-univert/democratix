@@ -36,6 +36,10 @@ pub trait ResultsContract {
     #[init]
     fn init(&self) {}
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     /// Publier les résultats d'une élection (VERSION POC)
     ///
     /// Dans la version production, cette fonction devrait:

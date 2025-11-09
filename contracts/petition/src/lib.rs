@@ -80,6 +80,10 @@ pub trait PetitionContract {
         self.next_petition_id().set(1u64);
     }
 
+    /// Fonction appelée lors de l'upgrade du contrat
+    #[upgrade]
+    fn upgrade(&self) {}
+
     /// Créer une nouvelle pétition
     ///
     /// # Arguments
