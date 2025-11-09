@@ -13,6 +13,11 @@ import voterRoutes from './routes/voters';
 import voteRoutes from './routes/votes';
 import cryptoRoutes from './routes/crypto';
 import zkProofRoutes from './routes/zkProof';
+// DEMOCRATIX V2.0 Routes
+import ricRoutes from './routes/ric';
+import petitionRoutes from './routes/petitions';
+import institutionRoutes from './routes/institutions';
+import pollRoutes from './routes/polls';
 import { zkVerifier } from './services/zkVerifierService';
 import { websocketService } from './services/websocketService';
 
@@ -65,11 +70,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// V1.0 Routes (Élections)
 app.use('/api/elections', electionRoutes);
 app.use('/api/voters', voterRoutes);
 app.use('/api/votes', voteRoutes);
 app.use('/api/crypto', cryptoRoutes);
 app.use('/api/zk', zkProofRoutes);
+
+// V2.0 Routes (Participation citoyenne)
+app.use('/api/ric', ricRoutes);
+app.use('/api/petitions', petitionRoutes);
+app.use('/api/institutions', institutionRoutes);
+app.use('/api/polls', pollRoutes);
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -116,3 +128,4 @@ async function startServer() {
 startServer();
 
 export default app;
+// Force restart
