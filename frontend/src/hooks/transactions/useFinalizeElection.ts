@@ -7,9 +7,6 @@ import {
   Address,
   SmartContractTransactionsFactory,
   TransactionsFactoryConfig,
-  U32Value,
-  U64Value,
-  BytesValue,
   useGetAccount,
   useGetNetworkConfig
 } from 'lib';
@@ -33,8 +30,9 @@ export const useFinalizeElection = () => {
       console.log('🔍 Starting finalization process...', { electionId, elgamalDecryptedVotes, candidates });
 
       // 1. Préparer les résultats (backend calcule totaux + upload IPFS)
+      const backendUrl = import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:3003';
       const prepareResponse = await axios.post(
-        `${import.meta.env.VITE_BACKEND_API_URL}/api/elections/${electionId}/prepare-final-results`,
+        `${backendUrl}/api/elections/${electionId}/prepare-final-results`,
         {
           elgamalDecryptedVotes: elgamalDecryptedVotes || {},
           candidates: candidates || []
@@ -59,17 +57,15 @@ export const useFinalizeElection = () => {
 
       // 3. Construire les arguments pour la transaction
       // Signature: finalizeElection(election_id: u64, results_ipfs_hash: ManagedBuffer, results: MultiValueEncoded<MultiValue2<u32, u64>>)
-      // MultiversX flatten automatiquement MultiValueEncoded, donc on envoie les paires flattened
+      // Pour Variadic<Composite<u32, u64>>, chaque élément doit être un tuple/array de 2 éléments
       const args: any[] = [
         electionId, // u64
         ipfsHash || '', // ManagedBuffer (peut être vide)
       ];
 
-      // Ajouter chaque résultat comme paires flattened: [candidate_id, vote_count, candidate_id, vote_count, ...]
-      // Utiliser les types explicites U32Value et U64Value pour s'assurer de l'encodage correct
+      // Ajouter chaque résultat comme un tuple [candidate_id, votes]
       for (const result of results) {
-        args.push(new U32Value(result.candidate_id)); // u32
-        args.push(new U64Value(result.votes)); // u64
+        args.push([result.candidate_id, result.votes]); // Composite<u32, u64>
       }
 
       console.log('📝 Transaction arguments:', args);

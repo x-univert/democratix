@@ -1,0 +1,15 @@
+[package]
+name = "petition-meta"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "petition-meta"
+path = "src/main.rs"
+
+[dependencies.petition]
+path = ".."
+
+[dependencies.multiversx-sc-meta-lib]
+version = "0.62"
